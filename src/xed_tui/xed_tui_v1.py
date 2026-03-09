@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-XED /TUI v1.022 (xed-tui_v1.py) — mutt-artiger TUI-Browser für ~/.claude/projects/ Sessions
+XED /TUI v1.022 (xed_tui_v1.py) — mutt-artiger TUI-Browser für ~/.claude/projects/ Sessions
 
 Tastatur:
   ↑ ↓ / j k   Navigation
@@ -2149,7 +2149,7 @@ HELP_TEXTS: dict[str, str] = {
     "de": """
 XED /TUI v1 — Vollständige Keybinding-Referenz
 =============================================
-Starten: python xed-tui_v1.py
+Starten: python xed_tui_v1.py
 
 Navigation
   ↑↓ / j k         Zeile hoch/runter
@@ -2208,7 +2208,7 @@ XED /TUI @ Collective Context
     "en": """
 XED /TUI v1 — Complete Keybinding Reference
 ==========================================
-Start: python xed-tui_v1.py
+Start: python xed_tui_v1.py
 
 Navigation
   ↑↓ / j k         Line up/down
@@ -2267,7 +2267,7 @@ XED /TUI @ Collective Context
     "fr": """
 XED /TUI v1 — Référence complète des raccourcis
 ===============================================
-Démarrer: python xed-tui_v1.py
+Démarrer: python xed_tui_v1.py
 
 Navigation
   ↑↓ / j k         Ligne haut/bas
@@ -2326,7 +2326,7 @@ XED /TUI @ Collective Context
     "ja": """
 XED /TUI v1 — キーバインド完全リファレンス
 ==========================================
-起動: python xed-tui_v1.py
+起動: python xed_tui_v1.py
 
 ナビゲーション
   ↑↓ / j k         1行上下
@@ -2385,7 +2385,7 @@ XED /TUI @ Collective Context
     "es": """
 XED /TUI v1 — Referencia completa de atajos
 ============================================
-Iniciar: python xed-tui_v1.py
+Iniciar: python xed_tui_v1.py
 
 Navegación
   ↑↓ / j k         Línea arriba/abajo
