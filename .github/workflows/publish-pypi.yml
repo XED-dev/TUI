@@ -9,9 +9,7 @@ jobs:
   publish:
     name: Build & publish to PyPI
     runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      id-token: write  # OIDC trusted publishing — no API token needed
+    # environment: pypi  # re-enable after OIDC trusted publishing is configured
 
     steps:
       - uses: actions/checkout@v4
@@ -24,5 +22,8 @@ jobs:
         run: uv build
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        # Uses OIDC — configure trusted publisher at pypi.org/manage/project/xed-tui/settings/publishing/
+        run: uv publish --token ${{ secrets.PYPI_API_TOKEN }}
+        # After first release: switch to OIDC trusted publishing at
+        # pypi.org/manage/project/xed-tui/settings/publishing/
+        # and restore: permissions: id-token: write  +  environment: pypi
+        # and replace this step with: uses: pypa/gh-action-pypi-publish@release/v1
