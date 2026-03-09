@@ -6,10 +6,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ---
 
-## [1.0.23] — unreleased
+## [1.0.24] — unreleased
+
+### Added
+- `install.sh` — one-command installer: `curl -fsSL https://tui.xed.dev/install.sh | bash`
+- GitHub Pages at `https://tui.xed.dev` (CNAME + docs/)
+- CI workflow: ruff linting + smoke test on Ubuntu/macOS × Python 3.11/3.13
 
 ### Changed
-- Versioning switched to 3-part semver (`MAJOR.MINOR.PATCH`) — previous `1.022` was normalized to `1.22` by PyPI (PEP 440), causing mismatches in Homebrew and install commands
+- Versioning: 3-part semver (`MAJOR.MINOR.PATCH`) — `pyproject.toml` reads `VERSION` from script via hatchling regex (single source of truth)
+- Quickstart rewritten: 3-step flow mirroring Claude Code installation
+
+### Fixed
+- Renamed `xed-tui_v1.py` → `xed_tui_v1.py` (valid Python module name — removes `importlib.util` workaround)
+- `termios`/`tty` conditional import for Windows compatibility (`print_paged` falls back to plain print)
+- `.deb` shell wrapper shebang: replaced YAML heredoc with `printf` (leading whitespace bug)
+- Removed npm from user-facing docs (workflow disabled)
+
+## [1.0.23] — skipped
+*Internal semver migration. Not published.*
 
 ## [1.22] — 2026-03-09
 *Previously tagged as `v1.022` — PyPI normalized the version.*

@@ -4,10 +4,25 @@
 
 ---
 
-## [1.0.23] — unveröffentlicht
+## [1.0.24] — unveröffentlicht
+
+### Neu
+- `install.sh` — Ein-Befehl-Installer: `curl -fsSL https://tui.xed.dev/install.sh | bash`
+- GitHub Pages unter `https://tui.xed.dev` (CNAME + docs/)
+- CI-Workflow: ruff-Linting + Smoke-Test auf Ubuntu/macOS × Python 3.11/3.13
 
 ### Geändert
-- Versionierung auf 3-stelliges Semver umgestellt (`MAJOR.MINOR.PATCH`) — bisheriges `1.022` wurde von PyPI zu `1.22` normalisiert (PEP 440), was zu Abweichungen in Homebrew und Install-Befehlen führte
+- Versionierung: 3-stelliges Semver (`MAJOR.MINOR.PATCH`) — `pyproject.toml` liest `VERSION` aus Script via hatchling Regex (Single Source of Truth)
+- Quickstart neu geschrieben: 3-Schritte-Anleitung analog zur Claude Code Installation
+
+### Behoben
+- `xed-tui_v1.py` → `xed_tui_v1.py` umbenannt (gültiger Python-Modulname — entfernt `importlib.util`-Workaround)
+- `termios`/`tty` konditionaler Import für Windows-Kompatibilität (`print_paged` fällt auf einfaches print zurück)
+- `.deb` Shell-Wrapper Shebang: YAML-Heredoc durch `printf` ersetzt (Leerzeichen-Bug)
+- npm aus nutzersichtbaren Docs entfernt (Workflow deaktiviert)
+
+## [1.0.23] — übersprungen
+*Interner Semver-Wechsel. Nicht veröffentlicht.*
 
 ## [1.22] — 2026-03-09
 *Vorher als `v1.022` getaggt — PyPI hat die Version normalisiert.*
