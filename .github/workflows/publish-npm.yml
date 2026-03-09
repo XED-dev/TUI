@@ -1,9 +1,10 @@
 name: Publish to npm
 
 on:
-  push:
-    tags:
-      - "v*"
+  # Disabled: npm adds no value for a Python-only curses tool.
+  # Primary distribution: pip/uv (PyPI) + brew + .deb
+  # Re-enable if a JS ecosystem use case emerges.
+  workflow_dispatch:  # manual trigger only
 
 jobs:
   publish:
