@@ -1,0 +1,49 @@
+name: Update Homebrew Tap
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  update-tap:
+    name: Bump xed-tui formula in homebrew-xed tap
+    runs-on: ubuntu-latest
+    # Only run after PyPI publish succeeds (formula needs the published tarball)
+    needs: []
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute SHA256 of PyPI sdist
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          # PyPI normalises version: 1.022 stays 1.022
+          URL="https://files.pythonhosted.org/packages/source/x/xed-tui/xed_tui-${VERSION}.tar.gz"
+          # Retry up to 3 times (PyPI propagation delay after publish)
+          for i in 1 2 3; do
+            SHA=$(curl -fsSL "$URL" | sha256sum | cut -d' ' -f1) && break
+            sleep 30
+          done
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "SHA256=$SHA"      >> $GITHUB_ENV
+          echo "URL=$URL"         >> $GITHUB_ENV
+
+      - name: Patch formula
+        run: |
+          sed -i \
+            -e "s|url \".*\"|url \"$URL\"|" \
+            -e "s|sha256 \".*\"|sha256 \"$SHA256\"|" \
+            packaging/homebrew/xed-tui.rb
+
+      - name: Push updated formula to homebrew-xed tap
+        uses: cpina/github-action-push-to-another-repository@main
+        env:
+          SSH_DEPLOY_KEY: ${{ secrets.TAP_DEPLOY_KEY }}
+        with:
+          source-directory: packaging/homebrew
+          destination-github-username: XED-dev
+          destination-repository-name: homebrew-xed
+          target-directory: Formula
+          target-branch: main
+          commit-message: "chore: bump xed-tui to ${{ env.VERSION }}"

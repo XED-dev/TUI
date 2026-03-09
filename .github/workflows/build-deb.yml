@@ -1,0 +1,52 @@
+name: Build .deb package
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: Build xed-tui_*.deb
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set version from tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+      - name: Assemble .deb tree
+        run: |
+          mkdir -p deb-build/DEBIAN
+          mkdir -p deb-build/usr/lib/xed-tui
+          mkdir -p deb-build/usr/bin
+
+          # Control file with version injected
+          sed "s/^Version:.*/Version: $VERSION/" \
+            packaging/deb/DEBIAN/control > deb-build/DEBIAN/control
+
+          # Python source
+          cp src/xed_tui/xed-tui_v1.py deb-build/usr/lib/xed-tui/
+          cp src/xed_tui/__init__.py    deb-build/usr/lib/xed-tui/
+          cp src/xed_tui/__main__.py    deb-build/usr/lib/xed-tui/
+
+          # Shell wrapper
+          cat > deb-build/usr/bin/xed-tui << 'EOF'
+          #!/bin/sh
+          exec python3 /usr/lib/xed-tui/__main__.py "$@"
+          EOF
+          chmod +x deb-build/usr/bin/xed-tui
+
+      - name: Build .deb
+        run: dpkg-deb --build deb-build "xed-tui_${VERSION}_all.deb"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb-package
+          path: "*.deb"
+
+      - name: Attach .deb to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "*.deb"

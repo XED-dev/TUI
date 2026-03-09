@@ -1,0 +1,41 @@
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    name: Build & publish @xed-dev/tui to npm
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Sync version tag → package.json
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          # Convert v1.022 → 1.022.0 for npm (semver requires 3 parts)
+          NPM_VERSION="${VERSION}.0"
+          cd npm
+          node -e "
+            const fs = require('fs');
+            const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            p.version = '${NPM_VERSION}';
+            fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
+          "
+
+      - name: Copy Python source into npm/lib/
+        run: cp src/xed_tui/xed-tui_v1.py npm/lib/xed-tui_v1.py
+
+      - name: Publish to npm
+        run: npm publish --access public
+        working-directory: npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

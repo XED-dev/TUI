@@ -1,0 +1,15 @@
+Package: xed-tui
+Version: 1.022
+Section: utils
+Priority: optional
+Architecture: all
+Depends: python3 (>= 3.11)
+Maintainer: XED-dev <hello@xed.dev>
+Description: Terminal browser and session manager for Claude Code
+ XED /TUI is a zero-dependency curses-based TUI for browsing, searching,
+ and managing Claude Code sessions stored as JSONL files in
+ ~/.claude/projects/. Inspired by mutt (email) and ranger (file browser).
+ .
+ Features: 4-panel layout, Markdown rendering, full-text search, tags,
+ notes with smart sync, session resume, multi-language help overlay.
+Homepage: https://tui.xed.dev

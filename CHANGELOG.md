@@ -1,33 +1,65 @@
-# Changelog — XED /TUI
-> German source: `de/CHANGELOG.md` — this file is an AI translation.
-> Format: [Keep a Changelog](https://keepachangelog.com/) · [Semantic Versioning](https://semver.org/)
+# Changelog
+> German version: [de/CHANGELOG.md](de/CHANGELOG.md)
+
+All notable changes are documented here.
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: `MAJOR.MINOR`
 
 ---
 
-## [v1.018] — 2026-03-09
+## [1.022] — 2026-03-09
 
-### First public release
+### Added
+- `Ctrl+E` — Settings overlay: configure editor (`auto` / `msedit` / `nano` / custom) and default app (`auto` / `typora` / custom)
+- `[E]` respects `editor_pref` setting; `[O]` respects `open_pref` setting
+- Settings persisted in `continue.json` across sessions and hot-reloads
+- Help texts updated in all 5 languages (DE / EN / FR / JA / ES)
+- Status bar: `[^E]Set` shortcut hint
 
-**Added:**
-- 4-panel layout: Projects · Sessions · Reader · Notes
-- Full Markdown rendering (bold, italic, code, tables with box-drawing)
-- `[a]` Start Claude Code `--resume` directly from the TUI
-- `[r]` Copy `/resume <uuid>` to clipboard
-- `[e]` Edit session notes in `$EDITOR`
-- `[t]` Rename sessions (native JSONL, compatible with ZED History)
-- `[/]` Live search across all sessions
-- `Ctrl+R` Hot-reload (state preserved via `--continue`)
-- Startup preview: last state restored on launch
+## [1.021] — 2026-03-07
 
-**Fixed:**
-- v1.016: `draw_table_row()` wrote hardcoded ASCII `|` instead of Unicode `│`
-- v1.017: Table column widths based on Markdown length instead of visual length
-- v1.018: Empty preview panel on startup when `focus != "threads"`
+### Added
+- Multi-language help overlay (DE / EN / FR / JA / ES), switchable with `←→` or number keys `1–5`
+- Language preference persisted in `continue.json`
 
-**Technical:**
-- ~1800 lines of pure Python · stdlib only (`curses`) · no dependencies
-- `CONTINUE_STATE_PATH`: `~/.local/share/xed-tui/continue.json`
+## [1.020] — 2026-03-06
+
+### Added
+- `[#]` Tags: per-session labels stored in `memory/tags.json`
+- Tag filter: `/#tag` in search mode filters sessions by tag
+- Token counter: `output_tokens` displayed as `42k` in sessions panel
+
+## [1.018] — 2026-03-05
+
+### Fixed
+- Empty reader panel on startup when saved `focus != "threads"` (explicit `preview_reader()` before event loop)
+
+## [1.017] — 2026-03-04
+
+### Fixed
+- `flush_table()`: column widths via visible length, ignoring Markdown markers
+
+## [1.016] — 2026-03-03
+
+### Added
+- Markdown table rendering with box-drawing: `┌─┬─┐` / `│ cell │` / `└─┴─┘`
+- `A_ITALIC` with ncurses 6.1+ fallback to underline
+
+## [1.010] — 2026-02-28
+
+### Added
+- `--continue` / `Ctrl+R`: full state persisted to `~/.local/share/xed-tui/continue.json`
+- Markdown rendering: h1/h2/h3, bold, inline code, italic, hrule, code blocks, tables, blockquotes
+- Token counter, full-text search `[/]`, Notes-Sync (`.sync` sidecar)
+- `[a]` Agent launch, `[r]` Resume-to-clipboard, Unicode input via `get_wch()`
+
+## [1.001] — 2026-02-20
+
+### Added
+- Initial release: 4-panel curses TUI for Claude Code sessions (`~/.claude/projects/`)
+- Projects, Sessions, Reader (JSONL → Markdown), Notes panels
+- vim-style navigation, `[t]` title, `[d]` delete, `[e]` editor, `[c]` clipboard
+- New note prefill with session transcript + `.sync` sidecar
 
 ---
 
-*Older development history: [fb-data](https://github.com/edikte/fb-data/commits/main/scripts/bin/XED-TUI/)*
+*Development history: [fb-data](https://github.com/edikte/fb-data/commits/main/scripts/bin/XED-TUI/)*

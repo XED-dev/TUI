@@ -1,0 +1,13 @@
+{
+  "version": "1.022",
+  "description": "Terminal browser and session manager for Claude Code",
+  "homepage": "https://tui.xed.dev",
+  "license": "MIT",
+  "notes": "Requires Python 3.11+. On Windows, use WSL or install Python from python.org.",
+  "url": "https://github.com/XED-dev/TUI/releases/download/v1.022/xed-tui-1.022-windows.zip",
+  "hash": "PLACEHOLDER_SHA256",
+  "bin": "xed-tui.exe",
+  "suggest": {
+    "Python 3.11+": "python"
+  }
+}

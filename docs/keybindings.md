@@ -25,12 +25,15 @@
 | `t` | Set title |
 | `d` | Delete session (confirm by typing "delete") |
 | `/` | Live search |
+| `#` | Set tags (comma-separated) · filter with `/#tag` |
 
 ## Reader + Notes
 
 | Key | Action |
 |---|---|
-| `e` | Open note in `$EDITOR` |
+| `e` | Open note in editor (auto-detect / configured via `Ctrl+E`) |
+| `o` | Open note in default app (xdg-open / configured via `Ctrl+E`) |
+| `u` | Update note with new turns (no editor) |
 | `c` | Copy note to clipboard |
 | `f` | Reader fullscreen |
 | `n` | Notes fullscreen |
@@ -43,10 +46,11 @@
 | `0` | Hide top area |
 | `1`–`9` | Top height (n × 5 lines) |
 | `Ctrl+R` | Hot-reload |
+| `Ctrl+E` | Settings: editor and default app |
 
 ## System
 
 | Key | Action |
 |---|---|
-| `?` | Show help |
+| `?` | Show help (DE / EN / FR / JA / ES — switch with `←→`) |
 | `q` / `Esc` | Back / Quit |

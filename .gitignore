@@ -1,9 +1,25 @@
 CLAUDE.md
 .claude/
+
+# Python
 *.pyc
+*.pyo
 __pycache__/
 .venv/
 .venv-*/
 *.egg-info/
 dist/
 build/
+
+# npm
+node_modules/
+npm/node_modules/
+npm/lib/xed-tui_v1.py
+
+# macOS
+.DS_Store
+
+# Build artifacts
+*.deb
+*.exe
+*.zip

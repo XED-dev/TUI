@@ -6,7 +6,7 @@
 XED /TUI ist in reinem Python geschrieben — ausschließlich stdlib, keine Abhängigkeiten.
 
 ```
-src/xed-tui_v1.py   (~1800 Zeilen)
+src/xed_tui/xed-tui_v1.py   (~2400 Zeilen)
 ├── State-Layer      — Sessions, Projekte, Continue-State lesen/schreiben
 ├── Parser-Layer     — JSONL parsen, Markdown inline rendern
 ├── Layout-Layer     — 4 curses-Panels verwalten
@@ -38,4 +38,4 @@ src/xed-tui_v1.py   (~1800 Zeilen)
 ## Entwicklungsworkflow
 
 Tägliche Entwicklung: `fb-data/scripts/bin/XED-TUI/xed-tui_v1.py`
-Release-Sync: → `xed/src/xed-tui_v1.py` bei Milestones
+Release-Sync: → `xed/src/xed_tui/xed-tui_v1.py` bei Milestones

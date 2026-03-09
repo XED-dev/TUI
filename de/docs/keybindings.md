@@ -25,12 +25,15 @@
 | `t` | Titel setzen |
 | `d` | Session löschen (Bestätigung: "delete" tippen) |
 | `/` | Live-Suche |
+| `#` | Tags setzen (komma-getrennt) · filtern mit `/#tag` |
 
 ## Reader + Notizen
 
 | Taste | Aktion |
 |---|---|
-| `e` | Notiz im `$EDITOR` öffnen |
+| `e` | Notiz im Editor öffnen (auto-detect / via `Ctrl+E` konfigurierbar) |
+| `o` | Notiz in Standard-App öffnen (xdg-open / via `Ctrl+E` konfigurierbar) |
+| `u` | Notiz mit neuen Turns aktualisieren (ohne Editor) |
 | `c` | Notiz in Clipboard |
 | `f` | Reader-Vollbild |
 | `n` | Notiz-Vollbild |
@@ -43,10 +46,11 @@
 | `0` | Top-Bereich ausblenden |
 | `1`–`9` | Top-Höhe (n × 5 Zeilen) |
 | `Ctrl+R` | Hot-Reload |
+| `Ctrl+E` | Einstellungen: Editor und Standard-App |
 
 ## System
 
 | Taste | Aktion |
 |---|---|
-| `?` | Hilfe anzeigen |
+| `?` | Hilfe anzeigen (DE / EN / FR / JA / ES — wechseln mit `←→`) |
 | `q` / `Esc` | Zurück / Beenden |

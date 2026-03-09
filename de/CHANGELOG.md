@@ -1,10 +1,32 @@
 # Changelog — XED /TUI
-> Englische Version: `../CHANGELOG.md` (AI-Übersetzung dieser Datei)
-> Format: [Keep a Changelog](https://keepachangelog.com/) · [Semantic Versioning](https://semver.org/)
+> Englische Version: [../CHANGELOG.md](../CHANGELOG.md)
+> Format: [Keep a Changelog](https://keepachangelog.com/) · Versionierung: `MAJOR.MINOR`
 
 ---
 
-## [v1.018] — 2026-03-09
+## [1.022] — 2026-03-09
+
+### Neu
+- `Ctrl+E` — Einstellungen-Overlay: Editor (`auto` / `msedit` / `nano` / custom) und Standard-App (`auto` / `typora` / custom) konfigurieren
+- `[E]` respektiert `editor_pref`-Einstellung; `[O]` respektiert `open_pref`-Einstellung
+- Einstellungen in `continue.json` gespeichert — bleiben über Sessions und Hot-Reloads erhalten
+- Hilfetexte in allen 5 Sprachen aktualisiert (DE / EN / FR / JA / ES)
+- Statuszeile: `[^E]Set` Hinweis
+
+## [1.021] — 2026-03-07
+
+### Neu
+- Mehrsprachiges Hilfe-Overlay (DE / EN / FR / JA / ES), umschaltbar mit `←→` oder Zahlentasten `1–5`
+- Sprachpräferenz in `continue.json` gespeichert
+
+## [1.020] — 2026-03-06
+
+### Neu
+- `[#]` Tags: Labels pro Session, gespeichert in `memory/tags.json`
+- Tag-Filter: `/#tag` im Such-Modus filtert Sessions nach Tag
+- Token-Zähler: `output_tokens` als `42k` im Sessions-Panel angezeigt
+
+## [1.018] — 2026-03-05
 
 ### Erstes öffentliches Release
 
@@ -25,7 +47,7 @@
 - v1.018: Leeres Vorschau-Panel beim Start wenn `focus != "threads"`
 
 **Technisch:**
-- ~1800 Zeilen reines Python · nur `curses` (stdlib) · keine Abhängigkeiten
+- ~2400 Zeilen reines Python · nur `curses` (stdlib) · keine Abhängigkeiten
 - `CONTINUE_STATE_PATH`: `~/.local/share/xed-tui/continue.json`
 
 ---

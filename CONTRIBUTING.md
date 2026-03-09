@@ -1,5 +1,5 @@
 # Contributing to XED /TUI
-> German source: `de/CONTRIBUTING.md` — this file is an AI translation.
+> German source: [de/CONTRIBUTING.md](de/CONTRIBUTING.md) — this file is an AI translation.
 
 All languages welcome — English is the release language of this file.
 

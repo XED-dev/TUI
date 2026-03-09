@@ -1,0 +1,29 @@
+{
+  "name": "@xed-dev/tui",
+  "version": "1.022.0",
+  "description": "Terminal browser and session manager for Claude Code — zero dependencies",
+  "keywords": ["claude-code", "tui", "terminal", "curses", "session-manager", "claude"],
+  "license": "MIT",
+  "homepage": "https://tui.xed.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/XED-dev/TUI.git"
+  },
+  "bugs": {
+    "url": "https://github.com/XED-dev/TUI/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "xed-tui": "./bin/xed-tui.js"
+  },
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "scripts/"
+  ]
+}

@@ -1,9 +1,8 @@
 # XED /TUI
-> A mutt-style session browser for Claude Code — terminal-first, no cloud service.
-> German source: `de/README.md` — this file is an AI translation.
+> A mutt-style session browser for Claude Code — terminal-first, zero dependencies, no cloud.
+> Deutsche Version: [de/README.md](de/README.md)
 
-**Organisation:** [Collective Context (CC)](https://collective-context.org) ·
-**License:** MIT · **Version:** v1.018
+**Version:** v1.022 · **License:** MIT · **Org:** [Collective Context (CC)](https://collective-context.org)
 
 ---
 
@@ -13,54 +12,88 @@ XED /TUI is a terminal browser for Claude Code sessions — inspired by mutt (em
 and ranger (file browser). It runs entirely locally, requires no API and no cloud service.
 
 **Who needs it:** Anyone using Claude Code daily who wants to browse, annotate,
-resume or manage their sessions — directly in the terminal.
+resume, and manage their sessions directly in the terminal.
 
 ---
 
 ## Installation
 
+### Recommended — uv (fastest)
 ```bash
-# Requirements: Python 3.8+ (stdlib only, no pip packages needed)
+uv tool install xed-tui
+```
+
+### pip / pipx
+```bash
+pipx install xed-tui
+# or:
+pip install xed-tui
+```
+
+### npm (for Claude Code users)
+```bash
+npm install -g @xed-dev/tui
+```
+
+### From source
+```bash
 git clone https://github.com/XED-dev/TUI.git
 cd TUI
-
-# Start
-python src/xed-tui_v1.py
+python -m xed_tui
 ```
+
+**Requirements:** Python 3.11+ · Unix terminal (Linux, macOS, WSL) · no pip packages needed
 
 ---
 
-## Features — v1.018
+## Features — v1.022
 
 - **4-Panel Layout** — Projects · Sessions · Reader · Notes (side-by-side)
-- **Session Browser** — all `~/.claude/projects/` sorted by time
-- **Reader** — full transcript with Markdown rendering
-  (`**bold**`, `` `code` ``, `*italic*`, tables, code blocks, quotes)
-- **`[a]` Resume** — start Claude Code with `--resume <uuid>` directly (CWD automatic)
+- **Session Browser** — all `~/.claude/projects/` sorted by recency
+- **Reader** — full transcript with Markdown rendering (`**bold**`, `` `code` ``, tables, code blocks)
+- **`[a]` Resume** — start Claude Code with `--resume <uuid>` (CWD automatic)
 - **`[r]` Clipboard** — `/resume <uuid>` → clipboard (for a running Claude Code)
-- **`[e]` Notes** — per-session `memory/<uuid>.md`, editable in `$EDITOR`
-- **`[t]` Title** — rename sessions (appears in Claude Code + ZED History)
-- **`[/]` Search** — live search across all sessions
-- **`Ctrl+R`** — hot-reload without restart
+- **`[e]` Notes** — per-session `memory/<uuid>.md`, editable in any editor
+- **`[t]` Title** — rename sessions (syncs with Claude Code + ZED History)
+- **`[/]` Search** — live search across titles and notes
+- **`[#]` Tags** — label sessions, filter by tag (`/#hvd`)
+- **`Ctrl+E`** — Settings: configure editor and default app
+- **`Ctrl+R`** — hot-reload, state preserved via `--continue`
+- **Multi-language help** — DE / EN / FR / JA / ES (`?` key)
+
+---
+
+## Quickstart
+
+```bash
+xed-tui                  # start
+xed-tui --continue       # restore last state
+xed-tui --help           # full keybinding reference
+```
+
+→ Full guide: [docs/quickstart.md](docs/quickstart.md)
 
 ---
 
 ## Keybindings
 
 | Key | Action |
-|---|---|
+|-----|--------|
 | `↑↓` / `j k` | Navigate |
-| `Tab` | Switch panel |
+| `Tab` / `← →` | Switch panel |
 | `Enter` | Open session |
 | `a` | Start Claude Code --resume |
 | `r` | Resume command to clipboard |
 | `e` | Open note in editor |
+| `o` | Open note in default app |
 | `t` | Set title |
 | `/` | Live search |
+| `#` | Set tags |
 | `f` | Reader fullscreen |
 | `n` | Notes fullscreen |
+| `Ctrl+E` | Settings (editor, app) |
 | `Ctrl+R` | Hot-reload |
-| `?` | Help |
+| `?` | Help (5 languages) |
 | `q` | Quit |
 
 → Full reference: [docs/keybindings.md](docs/keybindings.md)
@@ -69,9 +102,7 @@ python src/xed-tui_v1.py
 
 ## Why XED /TUI?
 
-ZED shows Claude Code sessions in its History panel — but there is no tool to
-**read, annotate, search and resume** them — until XED /TUI.
-
+ZED and Claude Code have no built-in tool to **read, annotate, search and resume** sessions.
 Sessions are stored as `.jsonl` files locally — human-readable, no lock-in.
 XED /TUI is the browser for them.
 
