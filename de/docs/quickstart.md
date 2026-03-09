@@ -4,7 +4,15 @@
 ## Voraussetzungen
 
 - Python 3.11 oder neuer
-- Claude Code installiert und mindestens einmal gestartet (erstellt `~/.claude/projects/`)
+- Claude Code installiert und mindestens einmal gestartet (erstellt `~/.claude/projects/`):
+  ```bash
+  # Linux / macOS
+  curl -fsSL https://claude.ai/install.sh | bash
+  # macOS (Homebrew)
+  brew install --cask claude-code
+  # Windows (winget)
+  winget install Anthropic.ClaudeCode
+  ```
 - Unix-Terminal: Linux, macOS oder WSL
 
 ## Installation

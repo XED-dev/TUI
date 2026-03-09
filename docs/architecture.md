@@ -1,5 +1,5 @@
 # Architecture — XED /TUI
-> German source: `../de/docs/architecture.md`
+> German source: [../de/docs/architecture.md](../de/docs/architecture.md)
 
 ## Overview
 

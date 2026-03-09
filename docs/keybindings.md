@@ -1,5 +1,5 @@
 # Keybindings — XED /TUI
-> German source: `../de/docs/keybindings.md`
+> German source: [../de/docs/keybindings.md](../de/docs/keybindings.md)
 
 ## Navigation
 

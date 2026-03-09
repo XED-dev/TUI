@@ -1,5 +1,5 @@
 # Tastenkürzel — XED /TUI
-> Englische Version: `../../docs/keybindings.md`
+> Englische Version: [../../docs/keybindings.md](../../docs/keybindings.md)
 
 ## Navigation
 

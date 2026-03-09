@@ -4,7 +4,15 @@
 ## Requirements
 
 - Python 3.11 or newer
-- Claude Code installed and used at least once (creates `~/.claude/projects/`)
+- Claude Code installed and used at least once (creates `~/.claude/projects/`):
+  ```bash
+  # Linux / macOS
+  curl -fsSL https://claude.ai/install.sh | bash
+  # macOS (Homebrew)
+  brew install --cask claude-code
+  # Windows (winget)
+  winget install Anthropic.ClaudeCode
+  ```
 - Unix terminal: Linux, macOS, or WSL
 
 ## Installation

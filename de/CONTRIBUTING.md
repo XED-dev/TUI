@@ -1,5 +1,5 @@
 # Mitmachen bei XED /TUI
-> Englische Version: `../CONTRIBUTING.md` (AI-Übersetzung dieser Datei)
+> Englische Version: [../CONTRIBUTING.md](../CONTRIBUTING.md) (AI-Übersetzung dieser Datei)
 
 Alle Sprachen willkommen — Deutsch ist die Hauptsprache dieser Quelle.
 

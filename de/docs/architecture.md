@@ -1,5 +1,5 @@
 # Architektur — XED /TUI
-> Englische Version: `../../docs/architecture.md`
+> Englische Version: [../../docs/architecture.md](../../docs/architecture.md)
 
 ## Überblick
 
