@@ -4,7 +4,13 @@
 
 ---
 
-## [1.022] — 2026-03-09
+## [1.0.23] — unveröffentlicht
+
+### Geändert
+- Versionierung auf 3-stelliges Semver umgestellt (`MAJOR.MINOR.PATCH`) — bisheriges `1.022` wurde von PyPI zu `1.22` normalisiert (PEP 440), was zu Abweichungen in Homebrew und Install-Befehlen führte
+
+## [1.22] — 2026-03-09
+*Vorher als `v1.022` getaggt — PyPI hat die Version normalisiert.*
 
 ### Neu
 - `Ctrl+E` — Einstellungen-Overlay: Editor (`auto` / `msedit` / `nano` / custom) und Standard-App (`auto` / `typora` / custom) konfigurieren

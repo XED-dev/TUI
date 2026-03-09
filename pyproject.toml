@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "xed-tui"
-version = "1.022"
+version = "1.0.23"
 description = "Terminal browser and session manager for Claude Code — zero dependencies"
 readme = "README.md"
 license = { text = "MIT" }

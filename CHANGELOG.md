@@ -6,7 +6,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ---
 
-## [1.022] — 2026-03-09
+## [1.0.23] — unreleased
+
+### Changed
+- Versioning switched to 3-part semver (`MAJOR.MINOR.PATCH`) — previous `1.022` was normalized to `1.22` by PyPI (PEP 440), causing mismatches in Homebrew and install commands
+
+## [1.22] — 2026-03-09
+*Previously tagged as `v1.022` — PyPI normalized the version.*
 
 ### Added
 - `Ctrl+E` — Settings overlay: configure editor (`auto` / `msedit` / `nano` / custom) and default app (`auto` / `typora` / custom)
