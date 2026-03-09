@@ -2448,8 +2448,8 @@ def print_paged(text: str) -> None:
     """more-artiges Paging: pausiert nach je einer Bildschirmseite."""
     lines = text.splitlines()
     page_size = max(shutil.get_terminal_size().lines - 1, 5)
-    if not _HAS_TERMIOS:
-        # Windows fallback: print all at once (no raw terminal control)
+    if not _HAS_TERMIOS or not sys.stdin.isatty():
+        # Windows fallback or non-TTY (CI, pipes): print all at once
         print(text)
         return
     i = 0
