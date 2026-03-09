@@ -8,7 +8,7 @@
   ```bash
   # Linux / macOS
   curl -fsSL https://claude.ai/install.sh | bash
-  # macOS (Homebrew)
+  # Linux / macOS (Homebrew)
   brew install --cask claude-code
   # Windows (winget)
   winget install Anthropic.ClaudeCode
