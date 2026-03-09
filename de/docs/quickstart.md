@@ -19,7 +19,7 @@ uv tool install xed-tui
 pipx install xed-tui
 ```
 
-### npm (für Claude Code Nutzer)
+### npm
 ```bash
 npm install -g @xed-dev/tui
 ```

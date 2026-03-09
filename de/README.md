@@ -32,7 +32,7 @@ pipx install xed-tui
 pip install xed-tui
 ```
 
-### npm (für Claude Code Nutzer)
+### npm
 ```bash
 npm install -g @xed-dev/tui
 ```
