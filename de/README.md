@@ -3,7 +3,7 @@
 > Englische Version: [../README.md](../README.md)
 
 **Organisation:** [Collective Context (CC)](https://collective-context.org) ·
-**Lizenz:** MIT · **Version:** v1.022
+**Lizenz:** MIT · **Version:** v1.0.24
 
 ---
 
@@ -32,9 +32,9 @@ pipx install xed-tui
 pip install xed-tui
 ```
 
-### npm
+### Ein-Zeilen-Installer
 ```bash
-npm install -g @xed-dev/tui
+curl -fsSL https://tui.xed.dev/install.sh | bash
 ```
 
 ### Aus dem Quellcode
@@ -48,7 +48,7 @@ python -m xed_tui
 
 ---
 
-## Features — v1.022
+## Features — v1.0.24
 
 - **4-Panel-Layout** — Projekte · Sessions · Reader · Notizen (Side-by-Side)
 - **Session-Browser** — alle `~/.claude/projects/` sortiert nach Aktualität

@@ -2,7 +2,7 @@
 > A mutt-style session browser for Claude Code — terminal-first, zero dependencies, no cloud.
 > Deutsche Version: [de/README.md](de/README.md)
 
-**Version:** v1.022 · **License:** MIT · **Org:** [Collective Context (CC)](https://collective-context.org)
+**Version:** v1.0.24 · **License:** MIT · **Org:** [Collective Context (CC)](https://collective-context.org)
 
 ---
 
@@ -30,9 +30,9 @@ pipx install xed-tui
 pip install xed-tui
 ```
 
-### npm
+### One-line installer
 ```bash
-npm install -g @xed-dev/tui
+curl -fsSL https://tui.xed.dev/install.sh | bash
 ```
 
 ### From source
@@ -46,7 +46,7 @@ python -m xed_tui
 
 ---
 
-## Features — v1.022
+## Features — v1.0.24
 
 - **4-Panel Layout** — Projects · Sessions · Reader · Notes (side-by-side)
 - **Session Browser** — all `~/.claude/projects/` sorted by recency

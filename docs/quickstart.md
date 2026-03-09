@@ -1,47 +1,64 @@
 # Quickstart — XED /TUI
 > German version: [../de/docs/quickstart.md](../de/docs/quickstart.md)
 
-## Requirements
+## Step 1 — Install Claude Code
 
-- Python 3.11 or newer
-- Claude Code installed and used at least once (creates `~/.claude/projects/`):
-  ```bash
-  # Linux / macOS — recommended
-  curl -fsSL https://claude.ai/install.sh | bash
-  # Linux / macOS (Homebrew)
-  brew install --cask claude-code
-  # Windows — use WSL, then run the Linux installer above
-  # (or: winget install Anthropic.ClaudeCode for native Windows)
-  ```
-- Unix terminal: Linux, macOS, or WSL
+XED /TUI is a session browser for Claude Code. It reads the session files
+that Claude Code creates in `~/.claude/projects/`. Claude Code must be
+installed and started at least once before XED /TUI can be used.
 
-## Installation
-
-### Recommended — uv
+**Linux / macOS:**
 ```bash
-uv tool install xed-tui
+curl -fsSL https://claude.ai/install.sh | bash
 ```
 
-### pip / pipx
-```bash
-pipx install xed-tui
+**Windows — recommended: WSL:**
+```powershell
+wsl --install            # if WSL not yet set up
+# then inside WSL:
+curl -fsSL https://claude.ai/install.sh | bash
 ```
 
-### npm
-```bash
-npm install -g @xed-dev/tui
+**Windows — alternative: native (winget):**
+```powershell
+winget install Anthropic.ClaudeCode
 ```
 
-No additional `pip install` needed — stdlib only (`curses`).
+Then start Claude Code once to create the session directory:
+```bash
+claude
+```
 
-## First launch
+→ Full Claude Code docs: [code.claude.com](https://code.claude.com)
+
+## Step 2 — Install XED /TUI
+
+One command — same pattern as Claude Code:
+
+```bash
+curl -fsSL https://tui.xed.dev/install.sh | bash
+```
+
+This installs `xed-tui` into `~/.local/bin/` — right next to `claude`.
+
+**Alternative methods:**
+```bash
+pipx install xed-tui       # if you use pipx
+uv tool install xed-tui    # if you use uv
+brew install xed-tui       # macOS / Linux (Homebrew)
+pip install --user xed-tui # plain pip
+```
+
+**Windows users:** Run the install command inside WSL or Git Bash —
+the same terminal where Claude Code runs.
+
+## Step 3 — Start
 
 ```bash
 xed-tui
 ```
 
-On first launch, XED /TUI automatically reads `~/.claude/projects/`.
-You see your projects on the left and sessions to the right.
+XED /TUI reads your Claude Code sessions automatically:
 
 ```
 ┌─ Projects ─┬─ Sessions ──────┬─ Reader ────────┬─ Notes ───┐
@@ -51,14 +68,11 @@ You see your projects on the left and sessions to the right.
  [?/H]Hlp [/]Find [#]Tag [T]Tit [D]Del [A]Agt [^E]Set ...
 ```
 
-## First steps
-
-1. `↑↓` — navigate through sessions
-2. `Enter` — open and read a session
+1. `↑↓` — navigate sessions
+2. `Enter` — read a session
 3. `a` — resume session in Claude Code
-4. `e` — write a note for the session
-5. `Ctrl+E` — configure your editor and default app
-6. `?` — show all keybindings (5 languages)
+4. `e` — write a note
+5. `?` — help (DE / EN / FR / JA / ES)
 
 ## Restore last state
 
