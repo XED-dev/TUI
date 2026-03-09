@@ -33,8 +33,12 @@ import re
 import shutil
 import subprocess
 import sys
-import termios
-import tty
+try:
+    import termios
+    import tty
+    _HAS_TERMIOS = True
+except ImportError:
+    _HAS_TERMIOS = False  # Windows — print_paged falls back to plain print
 from datetime import datetime
 from pathlib import Path
 
@@ -2444,6 +2448,10 @@ def print_paged(text: str) -> None:
     """more-artiges Paging: pausiert nach je einer Bildschirmseite."""
     lines = text.splitlines()
     page_size = max(shutil.get_terminal_size().lines - 1, 5)
+    if not _HAS_TERMIOS:
+        # Windows fallback: print all at once (no raw terminal control)
+        print(text)
+        return
     i = 0
     while i < len(lines):
         for line in lines[i:i + page_size]:
