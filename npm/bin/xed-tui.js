@@ -31,7 +31,7 @@ if (!python) {
 }
 
 // Run the bundled script directly — no pip install required
-const script = path.join(__dirname, "..", "lib", "xed-tui_v1.py");
+const script = path.join(__dirname, "..", "lib", "xed_tui_v1.py");
 const result = spawnSync(python, [script, ...process.argv.slice(2)], {
   stdio: "inherit",
 });

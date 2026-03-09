@@ -29,15 +29,13 @@ jobs:
             packaging/deb/DEBIAN/control > deb-build/DEBIAN/control
 
           # Python source
-          cp src/xed_tui/xed-tui_v1.py deb-build/usr/lib/xed-tui/
+          cp src/xed_tui/xed_tui_v1.py deb-build/usr/lib/xed-tui/
           cp src/xed_tui/__init__.py    deb-build/usr/lib/xed-tui/
           cp src/xed_tui/__main__.py    deb-build/usr/lib/xed-tui/
 
-          # Shell wrapper
-          cat > deb-build/usr/bin/xed-tui << 'EOF'
-          #!/bin/sh
-          exec python3 /usr/lib/xed-tui/__main__.py "$@"
-          EOF
+          # Shell wrapper — printf avoids heredoc indentation (shebang must be column 0)
+          printf '#!/bin/sh\nexec python3 /usr/lib/xed-tui/__main__.py "$@"\n' \
+            > deb-build/usr/bin/xed-tui
           chmod +x deb-build/usr/bin/xed-tui
 
       - name: Build .deb
