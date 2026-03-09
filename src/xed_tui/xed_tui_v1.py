@@ -1476,11 +1476,11 @@ def show_help(stdscr, state):
 
     # Width and height stay constant across all languages (use largest text)
     _max_content_w = max(
-        max((len(l) for l in HELP_TEXTS[lg].strip().split("\n")), default=40)
+        max((len(ln) for ln in HELP_TEXTS[lg].strip().split("\n")), default=40)
         for lg in LANGS
     )
     _max_lines = max(len(HELP_TEXTS[lg].strip().split("\n")) for lg in LANGS)
-    _lang_bar_sample = "  " + "  ".join(f"[●{l.upper()}]" for l in LANGS) + "  "
+    _lang_bar_sample = "  " + "  ".join(f"[●{lg.upper()}]" for lg in LANGS) + "  "
     _bw = min(max(_max_content_w + 6, len(_lang_bar_sample) + 4), w)
     _bh = min(_max_lines + 5, h)
 
@@ -1488,8 +1488,8 @@ def show_help(stdscr, state):
         lines = HELP_TEXTS[LANGS[lang_idx]].strip().split("\n")
 
         # Lang-bar: "[●DE] [ EN] [ FR] [ JA] [ ES]"
-        tags = [f"[●{l.upper()}]" if i == lang_idx else f"[ {l.upper()}]"
-                for i, l in enumerate(LANGS)]
+        tags = [f"[●{lg.upper()}]" if i == lang_idx else f"[ {lg.upper()}]"
+                for i, lg in enumerate(LANGS)]
 
         bw = _bw
         bh = _bh
@@ -1544,18 +1544,18 @@ def show_help(stdscr, state):
                 return
             elif k == curses.KEY_RIGHT:
                 lang_idx = (lang_idx + 1) % len(LANGS)
-                tags = [f"[●{l.upper()}]" if i == lang_idx else f"[ {l.upper()}]"
-                        for i, l in enumerate(LANGS)]
+                tags = [f"[●{lg.upper()}]" if i == lang_idx else f"[ {lg.upper()}]"
+                        for i, lg in enumerate(LANGS)]
                 break   # break scroll loop → language loop redraws
             elif k == curses.KEY_LEFT:
                 lang_idx = (lang_idx - 1) % len(LANGS)
-                tags = [f"[●{l.upper()}]" if i == lang_idx else f"[ {l.upper()}]"
-                        for i, l in enumerate(LANGS)]
+                tags = [f"[●{lg.upper()}]" if i == lang_idx else f"[ {lg.upper()}]"
+                        for i, lg in enumerate(LANGS)]
                 break   # break scroll loop → language loop redraws
             elif ord("1") <= k <= ord("5"):
                 lang_idx = k - ord("1")
-                tags = [f"[●{l.upper()}]" if i == lang_idx else f"[ {l.upper()}]"
-                        for i, l in enumerate(LANGS)]
+                tags = [f"[●{lg.upper()}]" if i == lang_idx else f"[ {lg.upper()}]"
+                        for i, lg in enumerate(LANGS)]
                 break   # break scroll loop → language loop redraws
             elif k in (ord(" "), curses.KEY_DOWN, ord("j"), curses.KEY_NPAGE,
                        curses.KEY_ENTER, ord("\n"), ord("\r")):
