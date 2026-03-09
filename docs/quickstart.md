@@ -6,12 +6,12 @@
 - Python 3.11 or newer
 - Claude Code installed and used at least once (creates `~/.claude/projects/`):
   ```bash
-  # Linux / macOS
+  # Linux / macOS — recommended
   curl -fsSL https://claude.ai/install.sh | bash
   # Linux / macOS (Homebrew)
   brew install --cask claude-code
-  # Windows (winget)
-  winget install Anthropic.ClaudeCode
+  # Windows — use WSL, then run the Linux installer above
+  # (or: winget install Anthropic.ClaudeCode for native Windows)
   ```
 - Unix terminal: Linux, macOS, or WSL
 
