@@ -15,22 +15,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Compute SHA256 of PyPI sdist
+      - name: Fetch URL + SHA256 from PyPI JSON API
         run: |
-          # Tag name is in head_branch for workflow_run triggered by tag push
           TAG="${{ github.event.workflow_run.head_branch }}"
           VERSION="${TAG#v}"
-          URL="https://files.pythonhosted.org/packages/source/x/xed-tui/xed_tui-${VERSION}.tar.gz"
-          # Retry up to 5 times (PyPI CDN propagation after publish)
+          # Retry up to 5× — PyPI may need a moment after publish
           for i in 1 2 3 4 5; do
-            SHA=$(curl -fsSL "$URL" | sha256sum | cut -d' ' -f1)
-            [ ${#SHA} -eq 64 ] && break
-            echo "Attempt $i: waiting for PyPI CDN..."
+            PYPI=$(curl -fsSL "https://pypi.org/pypi/xed-tui/json") && break
+            echo "Attempt $i: waiting for PyPI..."
             sleep 60
           done
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "SHA256=$SHA"      >> $GITHUB_ENV
-          echo "URL=$URL"         >> $GITHUB_ENV
+          # PyPI normalises versions (1.022 → 1.22), so always read from API
+          URL=$(echo "$PYPI" | python3 -c "import sys,json; d=json.load(sys.stdin); print([u['url'] for u in d['urls'] if u['url'].endswith('.tar.gz')][0])")
+          SHA=$(echo "$PYPI" | python3 -c "import sys,json; d=json.load(sys.stdin); print([u['digests']['sha256'] for u in d['urls'] if u['url'].endswith('.tar.gz')][0])")
+          PYPI_VERSION=$(echo "$PYPI" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['info']['version'])")
+          echo "VERSION=$PYPI_VERSION" >> $GITHUB_ENV
+          echo "SHA256=$SHA"           >> $GITHUB_ENV
+          echo "URL=$URL"              >> $GITHUB_ENV
 
       - name: Patch formula
         run: |
