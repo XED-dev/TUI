@@ -42,7 +42,7 @@ jobs:
       - name: Push updated formula to homebrew-xed tap
         uses: cpina/github-action-push-to-another-repository@main
         env:
-          SSH_DEPLOY_KEY: ${{ secrets.TAP_DEPLOY_KEY }}
+          API_TOKEN_GITHUB: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         with:
           source-directory: packaging/homebrew
           destination-github-username: XED-dev
