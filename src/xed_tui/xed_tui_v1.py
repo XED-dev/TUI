@@ -43,7 +43,7 @@ from datetime import datetime
 from pathlib import Path
 
 CLAUDE_PROJECTS = Path.home() / ".claude" / "projects"
-VERSION = "v1.0.23"
+VERSION = "v1.0.24"
 CONTINUE_STATE_PATH = Path.home() / ".local" / "share" / "xed-tui" / "continue.json"
 
 ANSI_ESCAPE = re.compile(

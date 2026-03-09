@@ -3,6 +3,16 @@
 Zero external dependencies. Requires Python 3.11+ and a Unix terminal.
 """
 
-VERSION = "v1.0.23"
-__version__ = "1.0.23"
-__all__ = ["VERSION"]
+try:
+    from importlib.metadata import version as _pkg_version
+    __version__ = _pkg_version("xed-tui")
+except Exception:
+    # Development fallback: read VERSION from the script directly
+    try:
+        from xed_tui.xed_tui_v1 import VERSION as _V
+        __version__ = _V.lstrip("v")
+    except Exception:
+        __version__ = "0.0.0"
+
+VERSION = f"v{__version__}"
+__all__ = ["VERSION", "__version__"]

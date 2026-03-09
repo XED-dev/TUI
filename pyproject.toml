@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "xed-tui"
-version = "1.0.23"
+dynamic = ["version"]
 description = "Terminal browser and session manager for Claude Code — zero dependencies"
 readme = "README.md"
 license = { text = "MIT" }
@@ -33,6 +33,10 @@ Repository  = "https://github.com/XED-dev/TUI"
 Changelog   = "https://github.com/XED-dev/TUI/blob/main/CHANGELOG.md"
 Issues      = "https://github.com/XED-dev/TUI/issues"
 Discussions = "https://github.com/XED-dev/TUI/discussions"
+
+[tool.hatch.version]
+path = "src/xed_tui/xed_tui_v1.py"
+pattern = 'VERSION = "v(?P<version>[^"]+)"'
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/xed_tui"]
