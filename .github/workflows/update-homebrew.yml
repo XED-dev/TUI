@@ -1,29 +1,32 @@
 name: Update Homebrew Tap
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_run:
+    workflows: ["Publish to PyPI"]
+    types: [completed]
 
 jobs:
   update-tap:
     name: Bump xed-tui formula in homebrew-xed tap
     runs-on: ubuntu-latest
-    # Only run after PyPI publish succeeds (formula needs the published tarball)
-    needs: []
+    # Only run if PyPI publish succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Compute SHA256 of PyPI sdist
         run: |
-          VERSION=${GITHUB_REF_NAME#v}
-          # PyPI normalises version: 1.022 stays 1.022
+          # Tag name is in head_branch for workflow_run triggered by tag push
+          TAG="${{ github.event.workflow_run.head_branch }}"
+          VERSION="${TAG#v}"
           URL="https://files.pythonhosted.org/packages/source/x/xed-tui/xed_tui-${VERSION}.tar.gz"
-          # Retry up to 3 times (PyPI propagation delay after publish)
-          for i in 1 2 3; do
-            SHA=$(curl -fsSL "$URL" | sha256sum | cut -d' ' -f1) && break
-            sleep 30
+          # Retry up to 5 times (PyPI CDN propagation after publish)
+          for i in 1 2 3 4 5; do
+            SHA=$(curl -fsSL "$URL" | sha256sum | cut -d' ' -f1)
+            [ ${#SHA} -eq 64 ] && break
+            echo "Attempt $i: waiting for PyPI CDN..."
+            sleep 60
           done
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "SHA256=$SHA"      >> $GITHUB_ENV
