@@ -1,120 +1,82 @@
 # XED /TUI
-> A mutt-style session browser for Claude Code — terminal-first, zero dependencies, no cloud.
-> Deutsche Version: [de/README.md](de/README.md)
 
-**Version:** v1.0.24 · **License:** MIT · **Org:** [Collective Context (CC)](https://collective-context.org)
+**Browse, search and resume your Claude Code sessions — right in the terminal.**
 
----
+> 🇩🇪 Deutsche Version: [de/README.md](de/README.md)
 
-## What is XED /TUI?
+<!--
+  Screenshot placeholder — add after taking terminal screenshots:
+  ![XED /TUI — 4-Panel Session Browser](docs/images/hero.png)
+-->
 
-XED /TUI is a terminal browser for Claude Code sessions — inspired by mutt (email)
-and ranger (file browser). It runs entirely locally, requires no API and no cloud service.
+Claude Code stores every conversation as a local file. XED /TUI makes them
+accessible: search across all sessions, read full transcripts with Markdown
+rendering, write notes, and jump back into any session with one keystroke.
 
-**Who needs it:** Anyone using Claude Code daily who wants to browse, annotate,
-resume, and manage their sessions directly in the terminal.
+## Install
 
----
-
-## Installation
-
-### Recommended — uv (fastest)
-```bash
-uv tool install xed-tui
-```
-
-### pip / pipx
-```bash
-pipx install xed-tui
-# or:
-pip install xed-tui
-```
-
-### One-line installer
 ```bash
 curl -fsSL https://tui.xed.dev/install.sh | bash
 ```
 
-### From source
+Requires: Claude Code · Python 3.11+ · Linux, macOS, or WSL
+
+**Alternative methods:**
 ```bash
-git clone https://github.com/XED-dev/TUI.git
-cd TUI
-python -m xed_tui
+pipx install xed-tui
+uv tool install xed-tui
+brew install xed-dev/xed/xed-tui
 ```
 
-**Requirements:** Python 3.11+ · Unix terminal (Linux, macOS, WSL) · no pip packages needed
-
----
-
-## Features — v1.0.24
-
-- **4-Panel Layout** — Projects · Sessions · Reader · Notes (side-by-side)
-- **Session Browser** — all `~/.claude/projects/` sorted by recency
-- **Reader** — full transcript with Markdown rendering (`**bold**`, `` `code` ``, tables, code blocks)
-- **`[a]` Resume** — start Claude Code with `--resume <uuid>` (CWD automatic)
-- **`[r]` Clipboard** — `/resume <uuid>` → clipboard (for a running Claude Code)
-- **`[e]` Notes** — per-session `memory/<uuid>.md`, editable in any editor
-- **`[t]` Title** — rename sessions (syncs with Claude Code + ZED History)
-- **`[/]` Search** — live search across titles and notes
-- **`[#]` Tags** — label sessions, filter by tag (`/#hvd`)
-- **`Ctrl+E`** — Settings: configure editor and default app
-- **`Ctrl+R`** — hot-reload, state preserved via `--continue`
-- **Multi-language help** — DE / EN / FR / JA / ES (`?` key)
-
----
-
-## Quickstart
+## 30-Second Demo
 
 ```bash
-xed-tui                  # start
-xed-tui --continue       # restore last state
-xed-tui --help           # full keybinding reference
+xed-tui          # start
 ```
-
-→ Full guide: [docs/quickstart.md](docs/quickstart.md)
-
----
-
-## Keybindings
 
 | Key | Action |
 |-----|--------|
-| `↑↓` / `j k` | Navigate |
-| `Tab` / `← →` | Switch panel |
-| `Enter` | Open session |
-| `a` | Start Claude Code --resume |
-| `r` | Resume command to clipboard |
-| `e` | Open note in editor |
-| `o` | Open note in default app |
-| `t` | Set title |
-| `/` | Live search |
-| `#` | Set tags |
-| `f` | Reader fullscreen |
-| `n` | Notes fullscreen |
-| `Ctrl+E` | Settings (editor, app) |
-| `Ctrl+R` | Hot-reload |
-| `?` | Help (5 languages) |
-| `q` | Quit |
+| `↑↓` | Browse sessions |
+| `Enter` | Read full transcript |
+| `/` | Search across all sessions |
+| `a` | Resume session in Claude Code |
+| `e` | Write a note |
+| `?` | Help (DE / EN / FR / JA / ES) |
 
 → Full reference: [docs/keybindings.md](docs/keybindings.md)
 
----
-
 ## Why XED /TUI?
 
-ZED and Claude Code have no built-in tool to **read, annotate, search and resume** sessions.
-Sessions are stored as `.jsonl` files locally — human-readable, no lock-in.
-XED /TUI is the browser for them.
+| Feature | XED /TUI | claude-dashboard | claude-session-browser |
+|---------|----------|-----------------|----------------------|
+| Zero dependencies | ✅ Python stdlib only | ❌ Go binary | ❌ Go binary |
+| Per-session notes | ✅ Smart sync | ❌ | ❌ |
+| Full-text search | ✅ Live filter | ✅ | ✅ |
+| Markdown rendering | ✅ bold, code, tables | ❌ raw text | ❌ raw text |
+| Multi-language help | ✅ DE/EN/FR/JA/ES | ❌ | ❌ |
+| Resume with one key | ✅ `a` → `--resume` | ✅ | ✅ |
+| Install time | ~5 sec (pip) | requires Go | requires Go |
 
----
+## Features
+
+- **4-Panel Layout** — Projects · Sessions · Reader · Notes (side-by-side)
+- **`a` Resume** — start Claude Code with `--resume <uuid>` (CWD automatic)
+- **`r` Clipboard** — copy `/resume <uuid>` for a running Claude Code instance
+- **`e` Notes** — per-session `memory/<uuid>.md`, editable in any editor
+- **`/` Search** — live search across titles and notes
+- **`#` Tags** — label sessions, filter by tag (`/#bugfix`)
+- **`Ctrl+R`** — hot-reload, state preserved via `--continue`
+
+→ Full guide: [Wiki](https://github.com/XED-dev/TUI/wiki) ·
+[Quickstart](docs/quickstart.md) ·
+[Discussions](https://github.com/XED-dev/TUI/discussions)
 
 ## Contribute
 
 All languages welcome · Alle Sprachen willkommen.
 
-→ [CONTRIBUTING.md](CONTRIBUTING.md) · [Issues](https://github.com/XED-dev/TUI/issues) ·
-[Discussions](https://github.com/XED-dev/TUI/discussions)
+→ [CONTRIBUTING.md](CONTRIBUTING.md) · [Issues](https://github.com/XED-dev/TUI/issues)
 
 ---
 
-*Building XED /TUI @ Collective Context (CC) · License: MIT*
+**Version:** v1.0.24 · **License:** MIT · **Org:** [Collective Context](https://collective-context.org) · **PyPI:** [xed-tui](https://pypi.org/project/xed-tui/)
