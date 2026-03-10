@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ro">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>XED /TUI — Terminal browser for Claude Code sessions</title>
+  <title>XED /TUI — Browser de sesiuni Claude Code</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 680px; margin: 0 auto; padding: 24px 20px 80px; background: #0d1117; color: #c9d1d9; line-height: 1.6; }
@@ -35,56 +35,56 @@
 </head>
 <body>
   <nav class="lang-nav">
-    <a href="de/" title="Deutsch">DE</a>
-    <span class="cur" title="English">EN</span>
-    <a href="fr/" title="Français">FR</a>
-    <a href="es/" title="Español">ES</a>
-    <a href="pt/" title="Português">PT</a>
-    <a href="it/" title="Italiano">IT</a>
-    <a href="hu/" title="Magyar">HU</a>
-    <a href="pl/" title="Polski">PL</a>
-    <a href="bg/" title="Български">BG</a>
-    <a href="ro/" title="Română">RO</a>
-    <a href="ru/" title="Русский">RU</a>
-    <a href="ja/" title="日本語">JA</a>
+    <a href="../de/" title="Deutsch">DE</a>
+    <a href="../" title="English">EN</a>
+    <a href="../fr/" title="Français">FR</a>
+    <a href="../es/" title="Español">ES</a>
+    <a href="../pt/" title="Português">PT</a>
+    <a href="../it/" title="Italiano">IT</a>
+    <a href="../hu/" title="Magyar">HU</a>
+    <a href="../pl/" title="Polski">PL</a>
+    <a href="../bg/" title="Български">BG</a>
+    <span class="cur" title="Română">RO</span>
+    <a href="../ru/" title="Русский">RU</a>
+    <a href="../ja/" title="日本語">JA</a>
   </nav>
 
   <h1>XED /TUI</h1>
-  <p class="tagline">Browse, search and resume your Claude Code sessions — right in the terminal.</p>
+  <p class="tagline">Navigați, căutați și reluați sesiunile Claude Code — direct în terminal.</p>
 
   <div class="install-box">
-    <h2>Install</h2>
+    <h2>Instalare</h2>
     <pre><code>curl -fsSL https://tui.xed.dev/install.sh | bash</code></pre>
     <p style="margin:0.5rem 0 0; color:#8b949e; font-size:0.85rem;">
-      Requires: <a href="https://code.claude.com">Claude Code</a> · Python 3.11+ · Linux, macOS, or WSL
+      Necesită: <a href="https://code.claude.com">Claude Code</a> · Python 3.11+ · Linux, macOS sau WSL
     </p>
   </div>
 
-  <h2>What it does</h2>
-  <p>Claude Code stores every conversation as a local file. XED /TUI makes them accessible: search across all sessions, read full transcripts with Markdown rendering, write notes, and jump back into any session with one keystroke.</p>
+  <h2>Ce face</h2>
+  <p>Claude Code stochează fiecare conversație ca fișier local. XED /TUI le face accesibile: căutați în toate sesiunile, citiți transcrieri complete cu redare Markdown, scrieți note și reveniți la orice sesiune cu o singură tastă.</p>
 
-  <h2>Key shortcuts</h2>
+  <h2>Scurtături tastatură</h2>
   <table>
-    <tr><th>Key</th><th>Action</th></tr>
-    <tr><td><code>↑↓</code></td><td>Browse sessions</td></tr>
-    <tr><td><code>Enter</code></td><td>Read full transcript</td></tr>
-    <tr><td><code>/</code></td><td>Search across all sessions</td></tr>
-    <tr><td><code>a</code></td><td>Resume session in Claude Code</td></tr>
-    <tr><td><code>e</code></td><td>Write a note</td></tr>
-    <tr><td><code>?</code></td><td>Help (5 languages)</td></tr>
+    <tr><th>Tastă</th><th>Acțiune</th></tr>
+    <tr><td><code>↑↓</code></td><td>Navigare sesiuni</td></tr>
+    <tr><td><code>Enter</code></td><td>Citire transcriere completă</td></tr>
+    <tr><td><code>/</code></td><td>Căutare în toate sesiunile</td></tr>
+    <tr><td><code>a</code></td><td>Reluare în Claude Code</td></tr>
+    <tr><td><code>e</code></td><td>Scrieți o notă</td></tr>
+    <tr><td><code>?</code></td><td>Ajutor (5 limbi)</td></tr>
   </table>
 
-  <h2>Why XED /TUI?</h2>
+  <h2>De ce XED /TUI?</h2>
   <table>
-    <tr><th>Feature</th><th>XED /TUI</th><th>Alternatives</th></tr>
-    <tr><td>Zero dependencies</td><td class="check">✅ Python stdlib</td><td class="cross">❌ Go / Node.js</td></tr>
-    <tr><td>Per-session notes</td><td class="check">✅ Smart sync</td><td class="cross">❌ not available</td></tr>
-    <tr><td>Markdown rendering</td><td class="check">✅ bold, code, tables</td><td class="cross">❌ raw text</td></tr>
-    <tr><td>Multi-language help</td><td class="check">✅ DE/EN/FR/JA/ES</td><td class="cross">❌ English only</td></tr>
-    <tr><td>Install time</td><td class="check">✅ ~5 seconds</td><td class="cross">❌ compile required</td></tr>
+    <tr><th>Caracteristică</th><th>XED /TUI</th><th>Alternative</th></tr>
+    <tr><td>Zero dependențe</td><td class="check">✅ doar Python stdlib</td><td class="cross">❌ Go / Node.js</td></tr>
+    <tr><td>Note per sesiune</td><td class="check">✅ Sincronizare inteligentă</td><td class="cross">❌ nedisponibil</td></tr>
+    <tr><td>Redare Markdown</td><td class="check">✅ bold, cod, tabele</td><td class="cross">❌ text simplu</td></tr>
+    <tr><td>Ajutor multilingv</td><td class="check">✅ DE/EN/FR/JA/ES</td><td class="cross">❌ doar engleză</td></tr>
+    <tr><td>Timp instalare</td><td class="check">✅ ~5 secunde</td><td class="cross">❌ necesită compilare</td></tr>
   </table>
 
-  <h2>Also available via</h2>
+  <h2>Disponibil și prin</h2>
   <pre><code>pipx install xed-tui
 uv tool install xed-tui
 brew install xed-dev/xed/xed-tui</code></pre>
@@ -95,7 +95,7 @@ brew install xed-dev/xed/xed-tui</code></pre>
     <a href="https://github.com/XED-dev/TUI/discussions">Discussions</a>
     <a href="https://pypi.org/project/xed-tui/">PyPI</a>
     <a href="https://collective-context.org">Collective Context</a>
-    <span>MIT License</span>
+    <span>Licență MIT</span>
   </div>
 </body>
 </html>

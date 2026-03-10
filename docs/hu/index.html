@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hu">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>XED /TUI — Terminal browser for Claude Code sessions</title>
+  <title>XED /TUI — Claude Code munkamenet-böngésző</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 680px; margin: 0 auto; padding: 24px 20px 80px; background: #0d1117; color: #c9d1d9; line-height: 1.6; }
@@ -35,56 +35,56 @@
 </head>
 <body>
   <nav class="lang-nav">
-    <a href="de/" title="Deutsch">DE</a>
-    <span class="cur" title="English">EN</span>
-    <a href="fr/" title="Français">FR</a>
-    <a href="es/" title="Español">ES</a>
-    <a href="pt/" title="Português">PT</a>
-    <a href="it/" title="Italiano">IT</a>
-    <a href="hu/" title="Magyar">HU</a>
-    <a href="pl/" title="Polski">PL</a>
-    <a href="bg/" title="Български">BG</a>
-    <a href="ro/" title="Română">RO</a>
-    <a href="ru/" title="Русский">RU</a>
-    <a href="ja/" title="日本語">JA</a>
+    <a href="../de/" title="Deutsch">DE</a>
+    <a href="../" title="English">EN</a>
+    <a href="../fr/" title="Français">FR</a>
+    <a href="../es/" title="Español">ES</a>
+    <a href="../pt/" title="Português">PT</a>
+    <a href="../it/" title="Italiano">IT</a>
+    <span class="cur" title="Magyar">HU</span>
+    <a href="../pl/" title="Polski">PL</a>
+    <a href="../bg/" title="Български">BG</a>
+    <a href="../ro/" title="Română">RO</a>
+    <a href="../ru/" title="Русский">RU</a>
+    <a href="../ja/" title="日本語">JA</a>
   </nav>
 
   <h1>XED /TUI</h1>
-  <p class="tagline">Browse, search and resume your Claude Code sessions — right in the terminal.</p>
+  <p class="tagline">Böngésszen, keressen és folytassa Claude Code munkameneteit — közvetlenül a terminálban.</p>
 
   <div class="install-box">
-    <h2>Install</h2>
+    <h2>Telepítés</h2>
     <pre><code>curl -fsSL https://tui.xed.dev/install.sh | bash</code></pre>
     <p style="margin:0.5rem 0 0; color:#8b949e; font-size:0.85rem;">
-      Requires: <a href="https://code.claude.com">Claude Code</a> · Python 3.11+ · Linux, macOS, or WSL
+      Szükséges: <a href="https://code.claude.com">Claude Code</a> · Python 3.11+ · Linux, macOS vagy WSL
     </p>
   </div>
 
-  <h2>What it does</h2>
-  <p>Claude Code stores every conversation as a local file. XED /TUI makes them accessible: search across all sessions, read full transcripts with Markdown rendering, write notes, and jump back into any session with one keystroke.</p>
+  <h2>Mit csinál</h2>
+  <p>A Claude Code minden beszélgetést helyi fájlként tárol. Az XED /TUI hozzáférhetővé teszi őket: keressen az összes munkamenetben, olvasson teljes átiratokat Markdown megjelenítéssel, írjon jegyzeteket, és ugorjon vissza bármely munkamenetbe egyetlen billentyűvel.</p>
 
-  <h2>Key shortcuts</h2>
+  <h2>Billentyűparancsok</h2>
   <table>
-    <tr><th>Key</th><th>Action</th></tr>
-    <tr><td><code>↑↓</code></td><td>Browse sessions</td></tr>
-    <tr><td><code>Enter</code></td><td>Read full transcript</td></tr>
-    <tr><td><code>/</code></td><td>Search across all sessions</td></tr>
-    <tr><td><code>a</code></td><td>Resume session in Claude Code</td></tr>
-    <tr><td><code>e</code></td><td>Write a note</td></tr>
-    <tr><td><code>?</code></td><td>Help (5 languages)</td></tr>
+    <tr><th>Billentyű</th><th>Művelet</th></tr>
+    <tr><td><code>↑↓</code></td><td>Munkamenetek böngészése</td></tr>
+    <tr><td><code>Enter</code></td><td>Teljes átirat olvasása</td></tr>
+    <tr><td><code>/</code></td><td>Keresés az összes munkamenetben</td></tr>
+    <tr><td><code>a</code></td><td>Folytatás Claude Code-ban</td></tr>
+    <tr><td><code>e</code></td><td>Megjegyzés írása</td></tr>
+    <tr><td><code>?</code></td><td>Súgó (5 nyelv)</td></tr>
   </table>
 
-  <h2>Why XED /TUI?</h2>
+  <h2>Miért XED /TUI?</h2>
   <table>
-    <tr><th>Feature</th><th>XED /TUI</th><th>Alternatives</th></tr>
-    <tr><td>Zero dependencies</td><td class="check">✅ Python stdlib</td><td class="cross">❌ Go / Node.js</td></tr>
-    <tr><td>Per-session notes</td><td class="check">✅ Smart sync</td><td class="cross">❌ not available</td></tr>
-    <tr><td>Markdown rendering</td><td class="check">✅ bold, code, tables</td><td class="cross">❌ raw text</td></tr>
-    <tr><td>Multi-language help</td><td class="check">✅ DE/EN/FR/JA/ES</td><td class="cross">❌ English only</td></tr>
-    <tr><td>Install time</td><td class="check">✅ ~5 seconds</td><td class="cross">❌ compile required</td></tr>
+    <tr><th>Funkció</th><th>XED /TUI</th><th>Alternatívák</th></tr>
+    <tr><td>Nulla függőség</td><td class="check">✅ csak Python stdlib</td><td class="cross">❌ Go / Node.js</td></tr>
+    <tr><td>Munkamenet-jegyzetek</td><td class="check">✅ Intelligens szinkron</td><td class="cross">❌ nem elérhető</td></tr>
+    <tr><td>Markdown megjelenítés</td><td class="check">✅ félkövér, kód, táblázatok</td><td class="cross">❌ nyers szöveg</td></tr>
+    <tr><td>Többnyelvű súgó</td><td class="check">✅ DE/EN/FR/JA/ES</td><td class="cross">❌ csak angol</td></tr>
+    <tr><td>Telepítési idő</td><td class="check">✅ ~5 másodperc</td><td class="cross">❌ fordítás szükséges</td></tr>
   </table>
 
-  <h2>Also available via</h2>
+  <h2>Elérhető még</h2>
   <pre><code>pipx install xed-tui
 uv tool install xed-tui
 brew install xed-dev/xed/xed-tui</code></pre>
@@ -95,7 +95,7 @@ brew install xed-dev/xed/xed-tui</code></pre>
     <a href="https://github.com/XED-dev/TUI/discussions">Discussions</a>
     <a href="https://pypi.org/project/xed-tui/">PyPI</a>
     <a href="https://collective-context.org">Collective Context</a>
-    <span>MIT License</span>
+    <span>MIT Licenc</span>
   </div>
 </body>
 </html>
