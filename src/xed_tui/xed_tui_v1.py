@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-XED /TUI v1.022 (xed_tui_v1.py) — mutt-artiger TUI-Browser für ~/.claude/projects/ Sessions
+XED /TUI v1.23.0 (xed_tui_v1.py) — mutt-artiger TUI-Browser für ~/.claude/projects/ Sessions
 
 Tastatur:
   ↑ ↓ / j k   Navigation
@@ -43,7 +43,7 @@ from datetime import datetime
 from pathlib import Path
 
 CLAUDE_PROJECTS = Path.home() / ".claude" / "projects"
-VERSION = "v1.0.24"
+VERSION = "v1.23.0"
 CONTINUE_STATE_PATH = Path.home() / ".local" / "share" / "xed-tui" / "continue.json"
 
 ANSI_ESCAPE = re.compile(

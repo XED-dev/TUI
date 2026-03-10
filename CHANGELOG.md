@@ -6,25 +6,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ---
 
-## [1.0.24] — unreleased
+## [1.23.0] — 2026-03-10
 
 ### Added
 - `install.sh` — one-command installer: `curl -fsSL https://tui.xed.dev/install.sh | bash`
 - GitHub Pages at `https://tui.xed.dev` (CNAME + docs/)
 - CI workflow: ruff linting + smoke test on Ubuntu/macOS × Python 3.11/3.13
+- Multilingual landing pages: DE / FR / ES / PT / IT / HU / PL / BG / RO / RU / JA with language nav bar
 
 ### Changed
-- Versioning: 3-part semver (`MAJOR.MINOR.PATCH`) — `pyproject.toml` reads `VERSION` from script via hatchling regex (single source of truth)
-- Quickstart rewritten: 3-step flow mirroring Claude Code installation
+- PyPI: action-oriented description, expanded keywords (`anthropic`, `ai-coding`, `session-browser`, `jsonl`), sidebar URLs (`Documentation` wiki, `XED /Suite`)
+- README: absolute URLs for PyPI rendering, screenshot placeholder with `raw.githubusercontent.com` URL
+- README: full keybindings table, `xed.dev` and wiki links
+- Branding: "XED /Suite" (`/`-prefix consistent across all pages)
 
 ### Fixed
 - Renamed `xed-tui_v1.py` → `xed_tui_v1.py` (valid Python module name — removes `importlib.util` workaround)
 - `termios`/`tty` conditional import for Windows compatibility (`print_paged` falls back to plain print)
 - `.deb` shell wrapper shebang: replaced YAML heredoc with `printf` (leading whitespace bug)
 - Removed npm from user-facing docs (workflow disabled)
-
-## [1.0.23] — skipped
-*Internal semver migration. Not published.*
+- Version bump resolves PyPI version ordering: `1.23.0 > 1.22` (old scheme `v1.022` was PEP 440 `1.22`)
 
 ## [1.22] — 2026-03-09
 *Previously tagged as `v1.022` — PyPI normalized the version.*
