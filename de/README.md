@@ -55,7 +55,7 @@ e                 # Notiz schreiben
 [Tastenkürzel](https://github.com/XED-dev/TUI/wiki/Tastenkürzel)
 
 → Landing Page: [tui.xed.dev](https://tui.xed.dev) ·
-XED Suite: [xed.dev](https://xed.dev)
+XED /Suite: [xed.dev](https://xed.dev)
 
 ---
 

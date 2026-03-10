@@ -55,7 +55,7 @@ e                 # write a note
 [Keybindings](https://github.com/XED-dev/TUI/wiki/Keybindings-EN)
 
 → Landing page: [tui.xed.dev](https://tui.xed.dev) ·
-XED Suite: [xed.dev](https://xed.dev)
+XED /Suite: [xed.dev](https://xed.dev)
 
 ---
 
