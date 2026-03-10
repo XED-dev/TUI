@@ -5,11 +5,22 @@ build-backend = "hatchling.build"
 [project]
 name = "xed-tui"
 dynamic = ["version"]
-description = "Terminal browser and session manager for Claude Code — zero dependencies"
+description = "Browse, search and resume Claude Code sessions — 4-panel TUI, zero dependencies"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11"
-keywords = ["claude-code", "tui", "terminal", "session-manager", "curses", "claude"]
+keywords = [
+    "claude-code",
+    "tui",
+    "terminal",
+    "session-manager",
+    "session-browser",
+    "curses",
+    "claude",
+    "anthropic",
+    "ai-coding",
+    "jsonl",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console :: Curses",
@@ -28,11 +39,13 @@ classifiers = [
 xed-tui = "xed_tui.__main__:main"
 
 [project.urls]
-Homepage    = "https://tui.xed.dev"
-Repository  = "https://github.com/XED-dev/TUI"
-Changelog   = "https://github.com/XED-dev/TUI/blob/main/CHANGELOG.md"
-Issues      = "https://github.com/XED-dev/TUI/issues"
-Discussions = "https://github.com/XED-dev/TUI/discussions"
+Homepage       = "https://tui.xed.dev"
+Documentation  = "https://github.com/XED-dev/TUI/wiki"
+Repository     = "https://github.com/XED-dev/TUI"
+"XED Suite"   = "https://xed.dev"
+Issues         = "https://github.com/XED-dev/TUI/issues"
+Discussions    = "https://github.com/XED-dev/TUI/discussions"
+Changelog      = "https://github.com/XED-dev/TUI/blob/main/CHANGELOG.md"
 
 [tool.hatch.version]
 path = "src/xed_tui/xed_tui_v1.py"
