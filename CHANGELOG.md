@@ -6,6 +6,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ---
 
+## [1.26.0] — 2026-04-15
+
+### Added
+- **Note co-archiving (M0)** — on `[e]` / `[E]` / `[u]` / `[U]`, the per-session note `<uuid>.md` is now copied into `~/.xed/tui/archive/<proj>/<uuid>.md` alongside the JSONL. The note is the curated catalog card — it now survives alongside the volume.
+- **`[L]` Lend restores the note too** — if an archived `<uuid>.md` exists, it's restored to `memory/<uuid>.md` next to the JSONL. Status message shows `Ausgeliehen + Notiz:` when both came back.
+- **Stats line in `★ ARCHIV`** — single-line summary at the top of the sessions panel: volumes · catalog cards · total bytes · date range · top project. No database, just `os.stat()` — scales comfortably into the thousands.
+- **Ranked search with context snippets** — `/` filters now score hits (title match weighs 10×, note match 1×) and sort by relevance. When a note hit isn't in the title, a short `«…snippet…»` is appended to the session row.
+
+### Changed
+- **Sidecar migration (M1–M4)** — XED-specific sidecars leave `~/.claude/projects/<proj>/memory/` and settle into `~/.xed/tui/state/`:
+  - `continue.json` → `~/.xed/tui/state/continue.json` (was `~/.local/share/xed-tui/`)
+  - `titles.json` / `tags.json` → `~/.xed/tui/state/<proj>/`
+  - `<uuid>.sync` → `~/.xed/tui/state/<proj>/<uuid>.sync`
+  - Per-session note `<uuid>.md` **stays** in `memory/` — it's the bridge to Claude's auto-memory.
+  - External tools (Claude Code, ZED) were never affected: the title source-of-truth is the `custom-title` record in the JSONL itself, not `titles.json`.
+- **Lazy migration** — readers fall back to the legacy paths if the new location is empty, so nothing breaks on upgrade. Writes always go to the new home.
+
+### Docs
+- README gets a **Backup** section pointing at Syncthing / rsync / git-annex — XED /TUI ships no sync on purpose.
+
 ## [1.25.0] — 2026-04-14
 
 ### Added

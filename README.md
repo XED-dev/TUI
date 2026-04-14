@@ -78,6 +78,21 @@ XED /Suite: [xed.dev](https://xed.dev)
 
 ---
 
+## Backup
+
+XED /TUI is strictly local — no cloud, no telemetry. The library lives under
+`~/.xed/tui/` (archive + state). If you want cross-machine sync or off-site
+backups, use the tool of your choice:
+
+- **[Syncthing](https://syncthing.net)** — peer-to-peer sync of `~/.xed/tui/` between your machines
+- **rsync** — periodic snapshots to an external drive or remote host
+- **[git-annex](https://git-annex.branchable.com)** — versioned history with large-file handling
+
+This is an infrastructure decision, not a tool decision — XED /TUI ships no
+built-in sync on purpose.
+
+---
+
 ## Contribute
 
 All languages welcome.

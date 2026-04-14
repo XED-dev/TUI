@@ -4,6 +4,26 @@
 
 ---
 
+## [1.26.0] — 2026-04-15
+
+### Neu
+- **Notiz-Mitarchivierung (M0)** — bei `[e]` / `[E]` / `[u]` / `[U]` wird die Per-Session-Notiz `<uuid>.md` jetzt parallel zur JSONL nach `~/.xed/tui/archive/<proj>/<uuid>.md` kopiert. Die Notiz ist die kuratierte Katalogkarte — sie überlebt nun zusammen mit dem Band.
+- **`[L]` Lend bringt die Notiz mit** — liegt eine archivierte `<uuid>.md` vor, wird sie ebenfalls nach `memory/<uuid>.md` zurückgespielt. Statusmeldung zeigt `Ausgeliehen + Notiz:` wenn beides zurückkam.
+- **Stats-Zeile im `★ ARCHIV`** — einzeilige Zusammenfassung oben im Sessions-Panel: Bände · Katalogkarten · Gesamtgröße · Datumsspanne · Top-Projekt. Keine Datenbank, nur `os.stat()` — skaliert locker in den Tausender-Bereich.
+- **Ranking-Suche mit Kontext-Snippets** — `/` gewichtet jetzt (Titel-Treffer 10×, Notiz-Treffer 1×) und sortiert nach Relevanz. Bei einem Notiz-Treffer, der nicht im Titel steckt, erscheint ein kurzes `«…Snippet…»` in der Sessions-Zeile.
+
+### Geändert
+- **Sidecar-Migration (M1–M4)** — XED-eigene Sidecars ziehen aus `~/.claude/projects/<proj>/memory/` nach `~/.xed/tui/state/`:
+  - `continue.json` → `~/.xed/tui/state/continue.json` (vorher `~/.local/share/xed-tui/`)
+  - `titles.json` / `tags.json` → `~/.xed/tui/state/<proj>/`
+  - `<uuid>.sync` → `~/.xed/tui/state/<proj>/<uuid>.sync`
+  - Per-Session-Notiz `<uuid>.md` **bleibt** im `memory/` — sie ist die Brücke zu Claudes Auto-Memory.
+  - Externe Tools (Claude Code, ZED) sind nicht betroffen: die Titel-Quelle ist der `custom-title`-Record in der JSONL selbst, nicht `titles.json`.
+- **Lazy-Migration** — Reader fallen auf die alten Pfade zurück, wenn der neue Ort leer ist. Upgrades bleiben unterbruchsfrei. Writes gehen immer in die neue Heimat.
+
+### Docs
+- README bekommt einen **Backup**-Abschnitt mit Verweis auf Syncthing / rsync / git-annex — XED /TUI liefert absichtlich keine eigene Sync-Lösung.
+
 ## [1.25.0] — 2026-04-14
 
 ### Neu

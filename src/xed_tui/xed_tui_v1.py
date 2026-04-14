@@ -44,13 +44,18 @@ from datetime import datetime
 from pathlib import Path
 
 CLAUDE_PROJECTS = Path.home() / ".claude" / "projects"
-VERSION = "v1.25.0"
-CONTINUE_STATE_PATH = Path.home() / ".local" / "share" / "xed-tui" / "continue.json"
+VERSION = "v1.26.0"
 
 # XED /TUI eigenes Territorium (außerhalb ~/.claude/ — Claude Code darf hier
-# nichts anfassen). Später auch SQLite-DB, Cache, etc.
+# nichts anfassen). Später auch SQLite-DB unter db/, Cache, etc.
 XED_TUI_HOME    = Path.home() / ".xed" / "tui"
 XED_TUI_ARCHIVE = XED_TUI_HOME / "archive"
+XED_TUI_STATE   = XED_TUI_HOME / "state"
+
+# Kontinuitäts-Zustand (TUI-Wiederaufnahme nach Neustart).
+CONTINUE_STATE_PATH = XED_TUI_STATE / "continue.json"
+# v1.26 Migration: alter XDG-Pfad, wird per Lazy-Fallback noch gelesen.
+_LEGACY_CONTINUE_STATE_PATH = Path.home() / ".local" / "share" / "xed-tui" / "continue.json"
 
 # Virtuelles "ARCHIV"-Projekt: zeigt alle archivierten Sessions / Notizen.
 # Wie in einer Klosterbibliothek — die kuratierte, dauerhafte Sammlung.
@@ -94,6 +99,99 @@ def is_archived(path: Path) -> bool:
     if proj_name == VIRTUAL_ARCHIV_NAME:
         return False
     return archive_path(proj_name, path.stem).exists()
+
+
+def archived_note_path(proj_name: str, uuid: str) -> Path:
+    """~/.xed/tui/archive/<proj>/<uuid>.md — Schatten-Kopie der Notiz (v1.26)."""
+    return XED_TUI_ARCHIVE / proj_name / f"{uuid}.md"
+
+
+def archive_stats() -> dict:
+    """Statistik über die XED-Bibliothek (Stats-Panel im ★ ARCHIV).
+
+    Zählt Bände (.jsonl) und Katalogkarten (.md) aus ~/.xed/tui/archive/,
+    summiert Bytes, bestimmt älteste/neueste mtime und Projekt-Verteilung.
+    Kein Index, nur os.stat() + iterdir() — reicht bis in den hohen Tausender-Bereich.
+    """
+    stats = {"volumes": 0, "notes": 0, "bytes": 0,
+             "oldest": None, "newest": None, "projects": []}
+    if not XED_TUI_ARCHIVE.exists():
+        return stats
+    per_proj: dict[str, int] = {}
+    for proj_dir in XED_TUI_ARCHIVE.iterdir():
+        if not proj_dir.is_dir():
+            continue
+        vols = 0
+        for f in proj_dir.iterdir():
+            try:
+                st = f.stat()
+            except OSError:
+                continue
+            stats["bytes"] += st.st_size
+            if stats["oldest"] is None or st.st_mtime < stats["oldest"]:
+                stats["oldest"] = st.st_mtime
+            if stats["newest"] is None or st.st_mtime > stats["newest"]:
+                stats["newest"] = st.st_mtime
+            if f.suffix == ".jsonl":
+                stats["volumes"] += 1
+                vols += 1
+            elif f.suffix == ".md" and _UUID_RE.match(f.stem):
+                stats["notes"] += 1
+        if vols:
+            per_proj[proj_dir.name] = vols
+    stats["projects"] = sorted(per_proj.items(), key=lambda x: x[1], reverse=True)
+    return stats
+
+
+def _fmt_bytes(n: int) -> str:
+    x = float(n)
+    for unit in ("B", "K", "M", "G"):
+        if x < 1024:
+            return f"{x:.0f}{unit}" if unit == "B" else f"{x:.1f}{unit}"
+        x /= 1024
+    return f"{x:.1f}T"
+
+
+def format_archive_stats(stats: dict, width: int) -> str:
+    """Einzeilige Zusammenfassung der Bibliothek für die Stats-Zeile im ARCHIV."""
+    if stats["volumes"] == 0 and stats["notes"] == 0:
+        return "★ Bibliothek leer — noch keine Sessions archiviert"
+    parts = [f"★ {stats['volumes']} Bände",
+             f"{stats['notes']} Karten",
+             _fmt_bytes(stats["bytes"])]
+    if stats["oldest"] and stats["newest"]:
+        d_old = datetime.fromtimestamp(stats["oldest"]).strftime("%y-%m-%d")
+        d_new = datetime.fromtimestamp(stats["newest"]).strftime("%y-%m-%d")
+        parts.append(f"{d_old}…{d_new}")
+    n_proj = len(stats["projects"])
+    if n_proj:
+        top = stats["projects"][0]
+        top_name = shorten_slug(top[0]) if len(top[0]) > 12 else top[0]
+        if n_proj == 1:
+            parts.append(f"1 Proj ({top_name})")
+        else:
+            parts.append(f"{n_proj} Proj · Top: {top_name} {top[1]}")
+    line = " · ".join(parts)
+    return line[: max(0, width - 2)]
+
+
+def archive_note(notes_file: Path) -> bool:
+    """Kopiert eine Per-Session-Notiz <uuid>.md ins Archiv (idempotent, mtime-preserve).
+    Primärquelle bleibt memory/<uuid>.md (Auto-Memory-Brücke) — dies ist reine
+    Schattenkopie für das Kronjuwel. Gibt True zurück wenn tatsächlich kopiert wurde."""
+    if notes_file.suffix != ".md" or not notes_file.exists():
+        return False
+    if not _UUID_RE.match(notes_file.stem):
+        return False    # Auto-Memory-Eintrag (user_/feedback_/project_/…), nicht unsere Sache
+    proj_name = note_project(notes_file).name
+    if proj_name == VIRTUAL_ARCHIV_NAME:
+        return False
+    dest = archived_note_path(proj_name, notes_file.stem)
+    if dest.exists() and notes_file.stat().st_mtime <= dest.stat().st_mtime:
+        return False
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(notes_file, dest)
+    return True
 
 
 def resolved_jsonl(path: Path) -> Path | None:
@@ -547,7 +645,18 @@ def shorten_slug(slug: str) -> str:
     return slug
 
 
+def _state_proj_dir(proj_dir: Path) -> Path:
+    """~/.xed/tui/state/<proj-slug>/ — XED-eigenes State-Verzeichnis pro Projekt (v1.26)."""
+    return XED_TUI_STATE / proj_dir.name
+
+
 def titles_path(proj_dir: Path) -> Path:
+    """~/.xed/tui/state/<proj-slug>/titles.json (v1.26-Heimat)."""
+    return _state_proj_dir(proj_dir) / "titles.json"
+
+
+def _legacy_titles_path(proj_dir: Path) -> Path:
+    """Vor v1.26: im memory/-Verzeichnis. Lazy-Fallback beim Lesen."""
     return proj_dir / "memory" / "titles.json"
 
 
@@ -556,6 +665,12 @@ def load_titles(proj_dir: Path) -> dict:
     if p.exists():
         try:
             return json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    legacy = _legacy_titles_path(proj_dir)
+    if legacy.exists():
+        try:
+            return json.loads(legacy.read_text(encoding="utf-8"))
         except Exception:
             pass
     return {}
@@ -568,6 +683,11 @@ def save_titles(proj_dir: Path, titles: dict):
 
 
 def tags_path(proj_dir: Path) -> Path:
+    """~/.xed/tui/state/<proj-slug>/tags.json (v1.26-Heimat)."""
+    return _state_proj_dir(proj_dir) / "tags.json"
+
+
+def _legacy_tags_path(proj_dir: Path) -> Path:
     return proj_dir / "memory" / "tags.json"
 
 
@@ -576,6 +696,12 @@ def load_tags(proj_dir: Path) -> dict:
     if p.exists():
         try:
             return json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    legacy = _legacy_tags_path(proj_dir)
+    if legacy.exists():
+        try:
+            return json.loads(legacy.read_text(encoding="utf-8"))
         except Exception:
             pass
     return {}
@@ -588,21 +714,36 @@ def save_tags(proj_dir: Path, tags: dict):
 
 
 def notes_sync_path(notes_file: Path) -> Path:
-    """Sidecar-Datei die speichert wie viele Turns bereits in der Notiz sind."""
+    """~/.xed/tui/state/<proj-slug>/<uuid>.sync — speichert synchronisierte Turn-Anzahl (v1.26)."""
+    proj = note_project(notes_file)
+    return _state_proj_dir(proj) / f"{notes_file.stem}.sync"
+
+
+def _legacy_notes_sync_path(notes_file: Path) -> Path:
     return notes_file.with_suffix(".sync")
 
 
 def read_sync_turns(notes_file: Path) -> int | None:
     """Gibt gespeicherte Turn-Anzahl zurück, None wenn kein .sync vorhanden."""
     p = notes_sync_path(notes_file)
-    try:
-        return int(p.read_text().strip())
-    except Exception:
-        return None
+    if p.exists():
+        try:
+            return int(p.read_text().strip())
+        except Exception:
+            return None
+    legacy = _legacy_notes_sync_path(notes_file)
+    if legacy.exists():
+        try:
+            return int(legacy.read_text().strip())
+        except Exception:
+            return None
+    return None
 
 
 def write_sync_turns(notes_file: Path, count: int):
-    notes_sync_path(notes_file).write_text(str(count))
+    p = notes_sync_path(notes_file)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(str(count))
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -759,8 +900,37 @@ class State:
             if not tag:
                 return sessions          # nur "#" getippt → noch kein Filter
             return [s for s in sessions if tag in self.session_tags(s)]
-        return [s for s in sessions
-                if q in self.title(s).lower() or q in self._notes_text(s)]
+        # v1.26: Ranking — Treffer im Titel zählen 10×, Notiz-Treffer 1×.
+        scored: list[tuple[int, Path]] = []
+        for s in sessions:
+            t_hits = self.title(s).lower().count(q)
+            n_hits = self._notes_text(s).count(q)
+            score = t_hits * 10 + n_hits
+            if score > 0:
+                scored.append((score, s))
+        # Desc nach Score; Reihenfolge bei Gleichstand = Original (stable sort erhält sessions()-Order).
+        scored.sort(key=lambda x: -x[0])
+        return [s for _, s in scored]
+
+    def search_snippet(self, path: Path, width: int = 36) -> str | None:
+        """v1.26: kurzer Kontext-String um den ersten Notiz-Treffer, oder None.
+        Nur wenn Suchterm nicht schon im Title steckt und nicht Tag-Filter."""
+        q = self.search_query.lower().strip()
+        if not q or q.startswith("#"):
+            return None
+        if q in self.title(path).lower():
+            return None
+        text = self._notes_text(path)
+        idx = text.find(q)
+        if idx < 0:
+            return None
+        pad = max(0, (width - len(q)) // 2)
+        start = max(0, idx - pad)
+        end = min(len(text), idx + len(q) + pad)
+        snippet = re.sub(r"\s+", " ", text[start:end]).strip()
+        left = "…" if start > 0 else ""
+        right = "…" if end < len(text) else ""
+        return f"«{left}{snippet}{right}»"
 
     def title(self, path: Path) -> str:
         # Priorität: /rename (JSONL) > [t] (titles.json) > erste Human-Message / Notiz-Überschrift
@@ -1099,6 +1269,7 @@ class State:
 
         notes_file.write_text("\n".join(lines), encoding="utf-8")
         write_sync_turns(notes_file, len(turns))   # Sync-Status setzen
+        archive_note(notes_file)                   # Katalogkarte ins Archiv
 
     def append_new_turns(self, notes_file: Path, session: Path | None = None) -> str:
         """Hängt Turns die seit dem letzten Sync neu hinzukamen an die Notiz-Datei an.
@@ -1132,6 +1303,7 @@ class State:
         with open(notes_file, "a", encoding="utf-8") as f:
             f.write("\n".join(lines))
         write_sync_turns(notes_file, len(turns))
+        archive_note(notes_file)   # Katalogkarte aktualisieren
         return f"  {len(new_turns)} neue Turn(s) angehängt."
 
     def update_all_notes(self, width: int) -> str:
@@ -1147,6 +1319,7 @@ class State:
         if not sessions:
             return "  Keine Sessions im aktuellen Projekt."
         created = updated = current_ = skipped = orphan = archived = 0
+        notes_archived = 0
         for sess in sessions:
             # Quelle (JSONL) und Ziel (.md) je nach Kontext bestimmen.
             if sess.suffix == ".md":
@@ -1185,6 +1358,12 @@ class State:
             else:
                 current_ += 1
 
+        # Katalogkarten ins Archiv ziehen (idempotent per mtime-Check).
+        for sess in sessions:
+            target = sess if sess.suffix == ".md" else self.notes_path(sess)
+            if target and target.exists() and archive_note(target):
+                notes_archived += 1
+
         # Caches invalidieren (Notizen-Text, Session-Reihenfolge).
         self._notes_text_cache.clear()
         self._sessions_cache.pop(self.proj_idx, None)
@@ -1197,7 +1376,9 @@ class State:
         if current_:
             parts.append(f"{current_} aktuell")
         if archived:
-            parts.append(f"{archived} archiviert")
+            parts.append(f"{archived} Bände")
+        if notes_archived:
+            parts.append(f"{notes_archived} Karten")
         if skipped:
             parts.append(f"{skipped} ohne Sync")
         if orphan:
@@ -1370,13 +1551,19 @@ def save_continue_state(state: "State") -> None:
 
 
 def load_continue_state() -> dict | None:
-    """Gespeicherten Zustand laden — None wenn Datei fehlt oder defekt."""
-    if not CONTINUE_STATE_PATH.exists():
-        return None
-    try:
-        return json.loads(CONTINUE_STATE_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        return None
+    """Gespeicherten Zustand laden — None wenn Datei fehlt oder defekt.
+    v1.26: Primary ~/.xed/tui/state/, Fallback auf alten XDG-Pfad."""
+    if CONTINUE_STATE_PATH.exists():
+        try:
+            return json.loads(CONTINUE_STATE_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+    if _LEGACY_CONTINUE_STATE_PATH.exists():
+        try:
+            return json.loads(_LEGACY_CONTINUE_STATE_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+    return None
 
 
 def apply_continue_state(state: "State", data: dict) -> None:
@@ -1521,7 +1708,17 @@ def draw_threads(win, state: State):
             win.addstr(0, w - len(ver) - 1, ver, attr)
         except curses.error:
             pass
-    visible = h - 2
+    virtual = state.is_virtual_archiv()
+    # Stats-Zeile nur im virtuellen ★ ARCHIV (nimmt eine Session-Zeile weg).
+    stats_row = 1 if virtual else 0
+    visible = h - 2 - stats_row
+
+    if virtual:
+        try:
+            win.addstr(1, 1, format_archive_stats(archive_stats(), w - 2).ljust(w - 2),
+                       curses.color_pair(3) | curses.A_BOLD)
+        except curses.error:
+            pass
 
     if state.thread_idx < state.thread_scroll:
         state.thread_scroll = state.thread_idx
@@ -1529,10 +1726,9 @@ def draw_threads(win, state: State):
         state.thread_scroll = state.thread_idx - visible + 1
 
     tag_col_w = 11 if w >= 70 else 0   # " #hvd #bug" — nur bei breitem Terminal
-    virtual = state.is_virtual_archiv()
 
     for row, i in enumerate(range(state.thread_scroll, state.thread_scroll + visible)):
-        y = row + 1
+        y = row + 1 + stats_row
         if i >= len(sessions):
             break
         s = sessions[i]
@@ -1557,9 +1753,16 @@ def draw_threads(win, state: State):
         if virtual:
             # Projekt-Kürzel in fixer Breite (8 Zeichen) → nachfolgende Spalte bleibt bündig.
             proj_tag = f"{shorten_slug(note_project(s).name):<8.8}"
-            title_short = f"[{proj_tag}] {title}"[:title_w]
+            full_title = f"[{proj_tag}] {title}"
         else:
-            title_short = title[:title_w]
+            full_title = title
+        # v1.26: bei Notiz-Match (nicht im Title) kurzes Kontext-Snippet anhängen.
+        snippet = state.search_snippet(s) if state.search_query else None
+        if snippet and title_w > len(full_title) + 6:
+            combo = f"{full_title}  {snippet}"
+            title_short = combo[:title_w]
+        else:
+            title_short = full_title[:title_w]
 
         is_sel = (i == state.thread_idx)
         row_attr  = curses.color_pair(9) | curses.A_BOLD if is_sel else curses.color_pair(4)
@@ -1582,11 +1785,11 @@ def draw_threads(win, state: State):
 
     if len(sessions) > visible:
         bar_h = max(1, visible * visible // len(sessions))
-        bar_y = 1 + state.thread_scroll * (visible - bar_h) // max(1, len(sessions) - visible)
+        bar_y = state.thread_scroll * (visible - bar_h) // max(1, len(sessions) - visible)
         for r in range(visible):
             attr = curses.color_pair(1) if bar_y <= r < bar_y + bar_h else curses.color_pair(2)
             try:
-                win.addstr(1 + r, w - 2, "│", attr)
+                win.addstr(1 + stats_row + r, w - 2, "│", attr)
             except curses.error:
                 pass
 
@@ -2352,8 +2555,10 @@ def main(stdscr, continue_data: dict | None = None):
                 flash_timer = 30
 
         elif key == ord("L"):
-            # [L] Lend — eine archivierte Session zurück ins Live-Verzeichnis kopieren.
-            # Setzt mtime auf jetzt, damit Claude Codes Cleanup-Zähler resettet.
+            # [L] Lend — archivierte Session + Notiz zurück ins Live-Verzeichnis kopieren.
+            # Setzt JSONL-mtime auf jetzt, damit Claude Codes Cleanup-Zähler resettet.
+            # v1.26: zieht zusätzlich die zugehörige <uuid>.md aus dem Archiv,
+            #        falls vorhanden — Kronjuwel mit zurück.
             path = state.current_session()
             if not path:
                 flash_msg = "  Keine Session ausgewählt."
@@ -2368,10 +2573,19 @@ def main(stdscr, continue_data: dict | None = None):
                 else:
                     try:
                         dest = restore_session(arch, target_proj)
+                        note_lent = False
+                        arch_note = archived_note_path(target_proj.name, path.stem)
+                        if arch_note.exists():
+                            mem_dir = target_proj / "memory"
+                            mem_dir.mkdir(parents=True, exist_ok=True)
+                            shutil.copy2(arch_note, mem_dir / arch_note.name)
+                            note_lent = True
                         state._sessions_cache.clear()
                         state._title_cache.pop(path, None)
                         state._tokens_cache.pop(path, None)
-                        flash_msg = f"  Ausgeliehen: {dest.name[:36]} · mtime refresht"
+                        state._notes_text_cache.pop(path, None)
+                        suffix = " + Notiz" if note_lent else ""
+                        flash_msg = f"  Ausgeliehen{suffix}: {dest.name[:32]}… · mtime refresht"
                     except OSError as e:
                         flash_msg = f"  Fehler beim Ausleihen: {e}"
             flash_timer = 50
@@ -2517,11 +2731,11 @@ Layout
 
 Session-Management
   s / S            Sessions neu laden + Fokus auf Sessions-Panel (setzt Filter zurück)
-  t / T            Titel setzen (persistiert in memory/titles.json + JSONL)
+  t / T            Titel setzen (persistiert in ~/.xed/tui/state/<proj>/titles.json + JSONL)
   d / D            Session löschen (Bestätigung: "delete" tippen)
   a / A            Claude Code mit --resume <uuid> starten (CWD aus Session-Metadaten)
-  L                Lend — archivierte Session aus XED-Bibliothek zurück ins ~/.claude/
-                   Verzeichnis kopieren (mtime wird aktualisiert → Cleanup-Reset)
+  L                Lend — archivierte Session + Notiz zurück ins ~/.claude/ (v1.26)
+                   (Bibliothek → Live; JSONL-mtime wird aktualisiert → Cleanup-Reset)
   r / R            /resume <uuid> in Zwischenablage (für laufendes Claude Code)
 
 Suche & Tags
@@ -2544,15 +2758,20 @@ Sonstiges
   q / Q            Sofort beenden
   ESC              Beenden mit Bestätigung
 
-Datei-Struktur
-  ~/.claude/projects/<proj>/
-  ├── <uuid>.jsonl          Session-Transcript
+Datei-Struktur (v1.26)
+  ~/.claude/projects/<proj>/              Claudes Hoheit
+  ├── <uuid>.jsonl          Session-Transcript (Claudes Datei, read-only für XED)
   └── memory/
-      ├── <uuid>.md         Notiz-Datei (manuell editierbar)
-      ├── <uuid>.sync       Sync-Status (Anzahl bereits syncter Turns)
-      ├── tags.json         Tags pro Session  {uuid: ["hvd", "bugfix"]}
-      ├── titles.json       Custom-Titel      {uuid: "Mein Titel"}
-      └── MEMORY.md         Projekt-Memory
+      ├── <uuid>.md         Notiz-Datei (XED schreibt, manuell editierbar)
+      └── MEMORY.md         Auto-Memory-Index (Claudes Datei)
+  ~/.xed/tui/                             XED-eigenes Territorium
+  ├── archive/<proj>/       Bibliothek: <uuid>.jsonl (Bände) + <uuid>.md (Katalogkarten)
+  └── state/                XED-Sidecars (ab v1.26, vorher im memory/)
+      ├── continue.json     TUI-Wiederaufnahme nach Neustart
+      └── <proj>/
+          ├── titles.json   Custom-Titel      {uuid: "Mein Titel"}
+          ├── tags.json     Tags pro Session  {uuid: ["hvd", "bugfix"]}
+          └── <uuid>.sync   Sync-Status (synchronisierte Turns)
 
 XED /TUI @ Collective Context
 """,
@@ -2579,11 +2798,11 @@ Layout
 
 Session Management
   s / S            Reload sessions + focus Sessions panel (resets filter)
-  t / T            Set title (persists in memory/titles.json + JSONL)
+  t / T            Set title (persists in ~/.xed/tui/state/<proj>/titles.json + JSONL)
   d / D            Delete session (confirm by typing "delete")
   a / A            Start Claude Code with --resume <uuid> (CWD from session metadata)
-  L                Lend — restore archived session from XED library back into
-                   ~/.claude/ (mtime refreshed → Claude Code cleanup timer reset)
+  L                Lend — restore archived session + note back into ~/.claude/ (v1.26)
+                   (library → live; JSONL mtime refreshed → Claude Code cleanup reset)
   r / R            /resume <uuid> to clipboard (for running Claude Code)
 
 Search & Tags
@@ -2606,15 +2825,20 @@ Other
   q / Q            Quit immediately
   ESC              Quit with confirmation
 
-File Structure
-  ~/.claude/projects/<proj>/
-  ├── <uuid>.jsonl          Session transcript
+File Structure (v1.26)
+  ~/.claude/projects/<proj>/              Claude's territory
+  ├── <uuid>.jsonl          Session transcript (Claude's file, read-only for XED)
   └── memory/
-      ├── <uuid>.md         Note file (manually editable)
-      ├── <uuid>.sync       Sync status (number of synced turns)
-      ├── tags.json         Tags per session  {uuid: ["hvd", "bugfix"]}
-      ├── titles.json       Custom titles     {uuid: "My Title"}
-      └── MEMORY.md         Project memory
+      ├── <uuid>.md         Note file (XED writes; manually editable)
+      └── MEMORY.md         Auto-memory index (Claude's file)
+  ~/.xed/tui/                             XED's own territory
+  ├── archive/<proj>/       Library: <uuid>.jsonl (volumes) + <uuid>.md (catalog cards)
+  └── state/                XED sidecars (since v1.26, formerly in memory/)
+      ├── continue.json     TUI restore state
+      └── <proj>/
+          ├── titles.json   Custom titles     {uuid: "My Title"}
+          ├── tags.json     Tags per session  {uuid: ["hvd", "bugfix"]}
+          └── <uuid>.sync   Sync status (synced turns count)
 
 XED /TUI @ Collective Context
 """,
@@ -2641,11 +2865,11 @@ Disposition
 
 Gestion des sessions
   s / S            Recharger sessions + focus panneau Sessions (réinitialise filtre)
-  t / T            Définir titre (persistant dans memory/titles.json + JSONL)
+  t / T            Définir titre (persistant dans ~/.xed/tui/state/<proj>/titles.json + JSONL)
   d / D            Supprimer session (confirmer en tapant "delete")
   a / A            Lancer Claude Code avec --resume <uuid> (CWD des métadonnées)
-  L                Lend — restaurer la session archivée dans ~/.claude/ (mtime
-                   actualisé → compteur de nettoyage Claude Code réinitialisé)
+  L                Lend — restaurer session archivée + note dans ~/.claude/ (v1.26)
+                   (bibliothèque → live ; mtime JSONL actualisé → reset du nettoyage)
   r / R            /resume <uuid> vers presse-papiers (pour Claude Code en cours)
 
 Recherche & Étiquettes
@@ -2668,15 +2892,20 @@ Autre
   q / Q            Quitter immédiatement
   ESC              Quitter avec confirmation
 
-Structure des fichiers
-  ~/.claude/projects/<proj>/
-  ├── <uuid>.jsonl          Transcript de session
+Structure des fichiers (v1.26)
+  ~/.claude/projects/<proj>/              Territoire Claude
+  ├── <uuid>.jsonl          Transcript de session (fichier Claude, XED lit seulement)
   └── memory/
-      ├── <uuid>.md         Fichier note (modifiable manuellement)
-      ├── <uuid>.sync       Statut sync (nombre de tours synchronisés)
-      ├── tags.json         Étiquettes par session  {uuid: ["hvd", "bugfix"]}
-      ├── titles.json       Titres personnalisés    {uuid: "Mon titre"}
-      └── MEMORY.md         Mémoire du projet
+      ├── <uuid>.md         Fichier note (écrit par XED, modifiable manuellement)
+      └── MEMORY.md         Index auto-memory (fichier Claude)
+  ~/.xed/tui/                             Territoire XED
+  ├── archive/<proj>/       Bibliothèque: <uuid>.jsonl (volumes) + <uuid>.md (catalogue)
+  └── state/                Sidecars XED (depuis v1.26, avant dans memory/)
+      ├── continue.json     État de reprise du TUI
+      └── <proj>/
+          ├── titles.json   Titres personnalisés    {uuid: "Mon titre"}
+          ├── tags.json     Étiquettes par session  {uuid: ["hvd", "bugfix"]}
+          └── <uuid>.sync   Statut sync (tours synchronisés)
 
 XED /TUI @ Collective Context
 """,
@@ -2703,11 +2932,11 @@ XED /TUI v1 — キーバインド完全リファレンス
 
 セッション管理
   s / S            セッション再読込 + セッションパネルにフォーカス
-  t / T            タイトル設定 (memory/titles.json + JSONL に保存)
+  t / T            タイトル設定 (~/.xed/tui/state/<proj>/titles.json + JSONL に保存)
   d / D            セッション削除 ("delete" と入力して確認)
   a / A            Claude Code を --resume <uuid> で起動
-  L                Lend — アーカイブ済みセッションを ~/.claude/ に復元
-                   (mtime を更新 → Claude Code のクリーンアップタイマーをリセット)
+  L                Lend — アーカイブ済みセッション + ノートを ~/.claude/ に復元 (v1.26)
+                   (ライブラリ → ライブ; JSONL mtime 更新 → クリーンアップリセット)
   r / R            /resume <uuid> をクリップボードにコピー
 
 検索 & タグ
@@ -2730,15 +2959,20 @@ XED /TUI v1 — キーバインド完全リファレンス
   q / Q            即時終了
   ESC              確認して終了
 
-ファイル構成
-  ~/.claude/projects/<proj>/
-  ├── <uuid>.jsonl          セッショントランスクリプト
+ファイル構成 (v1.26)
+  ~/.claude/projects/<proj>/              Claude の領域
+  ├── <uuid>.jsonl          セッショントランスクリプト (Claude のファイル、XED は読取専用)
   └── memory/
-      ├── <uuid>.md         ノートファイル (手動編集可)
-      ├── <uuid>.sync       同期状態 (同期済みターン数)
-      ├── tags.json         セッションのタグ  {uuid: ["hvd", "bugfix"]}
-      ├── titles.json       カスタムタイトル  {uuid: "マイタイトル"}
-      └── MEMORY.md         プロジェクトメモリ
+      ├── <uuid>.md         ノートファイル (XED が書込、手動編集可)
+      └── MEMORY.md         Auto-memory インデックス (Claude のファイル)
+  ~/.xed/tui/                             XED の領域
+  ├── archive/<proj>/       ライブラリ: <uuid>.jsonl (巻) + <uuid>.md (目録カード)
+  └── state/                XED サイドカー (v1.26 以降、以前は memory/)
+      ├── continue.json     TUI 再開状態
+      └── <proj>/
+          ├── titles.json   カスタムタイトル  {uuid: "マイタイトル"}
+          ├── tags.json     セッションのタグ  {uuid: ["hvd", "bugfix"]}
+          └── <uuid>.sync   同期状態 (同期済みターン数)
 
 XED /TUI @ Collective Context
 """,
@@ -2765,11 +2999,11 @@ Disposición
 
 Gestión de sesiones
   s / S            Recargar sesiones + enfocar panel Sesiones (reinicia filtro)
-  t / T            Establecer título (persiste en memory/titles.json + JSONL)
+  t / T            Establecer título (persiste en ~/.xed/tui/state/<proj>/titles.json + JSONL)
   d / D            Eliminar sesión (confirmar escribiendo "delete")
   a / A            Iniciar Claude Code con --resume <uuid> (CWD de metadatos)
-  L                Lend — restaurar sesión archivada en ~/.claude/ (mtime
-                   actualizado → reset del contador de limpieza de Claude Code)
+  L                Lend — restaurar sesión archivada + nota en ~/.claude/ (v1.26)
+                   (biblioteca → live; mtime JSONL actualizado → reset de limpieza)
   r / R            /resume <uuid> al portapapeles (para Claude Code en ejecución)
 
 Búsqueda & Etiquetas
@@ -2792,15 +3026,20 @@ Otros
   q / Q            Salir inmediatamente
   ESC              Salir con confirmación
 
-Estructura de archivos
-  ~/.claude/projects/<proj>/
-  ├── <uuid>.jsonl          Transcript de sesión
+Estructura de archivos (v1.26)
+  ~/.claude/projects/<proj>/              Territorio de Claude
+  ├── <uuid>.jsonl          Transcript de sesión (archivo de Claude, XED solo lee)
   └── memory/
-      ├── <uuid>.md         Archivo de nota (editable manualmente)
-      ├── <uuid>.sync       Estado sync (número de turnos sincronizados)
-      ├── tags.json         Etiquetas por sesión  {uuid: ["hvd", "bugfix"]}
-      ├── titles.json       Títulos personalizados {uuid: "Mi título"}
-      └── MEMORY.md         Memoria del proyecto
+      ├── <uuid>.md         Archivo de nota (XED escribe, editable manualmente)
+      └── MEMORY.md         Índice auto-memory (archivo de Claude)
+  ~/.xed/tui/                             Territorio de XED
+  ├── archive/<proj>/       Biblioteca: <uuid>.jsonl (volúmenes) + <uuid>.md (catálogo)
+  └── state/                Sidecars XED (desde v1.26, antes en memory/)
+      ├── continue.json     Estado de reanudación del TUI
+      └── <proj>/
+          ├── titles.json   Títulos personalizados {uuid: "Mi título"}
+          ├── tags.json     Etiquetas por sesión  {uuid: ["hvd", "bugfix"]}
+          └── <uuid>.sync   Estado sync (turnos sincronizados)
 
 XED /TUI @ Collective Context
 """,
