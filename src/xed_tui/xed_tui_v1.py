@@ -1190,13 +1190,20 @@ class State:
         self._sessions_cache.pop(self.proj_idx, None)
 
         parts = []
-        if created: parts.append(f"{created} neu")
-        if updated: parts.append(f"{updated} erneuert")
-        if current_: parts.append(f"{current_} aktuell")
-        if archived: parts.append(f"{archived} archiviert")
-        if skipped: parts.append(f"{skipped} ohne Sync")
-        if orphan:  parts.append(f"{orphan} verwaist")
-        if not parts: parts = ["nichts zu tun"]
+        if created:
+            parts.append(f"{created} neu")
+        if updated:
+            parts.append(f"{updated} erneuert")
+        if current_:
+            parts.append(f"{current_} aktuell")
+        if archived:
+            parts.append(f"{archived} archiviert")
+        if skipped:
+            parts.append(f"{skipped} ohne Sync")
+        if orphan:
+            parts.append(f"{orphan} verwaist")
+        if not parts:
+            parts = ["nichts zu tun"]
         return "  Bibliothek: " + " · ".join(parts)
 
     def backup_current(self) -> str:
