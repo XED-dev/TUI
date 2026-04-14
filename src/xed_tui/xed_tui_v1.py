@@ -22,7 +22,7 @@ Tastatur:
   ?            Hilfe
 
 Starten:
-  python scripts/bin/xed-tui.py
+  python dev/bin/xed-tui.py
 """
 
 import curses
@@ -33,6 +33,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 try:
     import termios
     import tty
@@ -43,8 +44,106 @@ from datetime import datetime
 from pathlib import Path
 
 CLAUDE_PROJECTS = Path.home() / ".claude" / "projects"
-VERSION = "v1.23.0"
+VERSION = "v1.25.0"
 CONTINUE_STATE_PATH = Path.home() / ".local" / "share" / "xed-tui" / "continue.json"
+
+# XED /TUI eigenes Territorium (außerhalb ~/.claude/ — Claude Code darf hier
+# nichts anfassen). Später auch SQLite-DB, Cache, etc.
+XED_TUI_HOME    = Path.home() / ".xed" / "tui"
+XED_TUI_ARCHIVE = XED_TUI_HOME / "archive"
+
+# Virtuelles "ARCHIV"-Projekt: zeigt alle archivierten Sessions / Notizen.
+# Wie in einer Klosterbibliothek — die kuratierte, dauerhafte Sammlung.
+VIRTUAL_ARCHIV_NAME = "__ARCHIV__"
+VIRTUAL_ARCHIV_PATH = CLAUDE_PROJECTS / VIRTUAL_ARCHIV_NAME
+_UUID_RE = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.I)
+
+
+def note_project(note_path: Path) -> Path:
+    """Projekt-Verzeichnis einer Notiz herleiten: memory/<uuid>.md → <projekt>."""
+    return note_path.parent.parent
+
+
+def archive_path(proj_name: str, uuid: str) -> Path:
+    """~/.xed/tui/archive/<proj>/<uuid>.jsonl"""
+    return XED_TUI_ARCHIVE / proj_name / f"{uuid}.jsonl"
+
+
+def archive_session(session: Path) -> bool:
+    """Kopiert eine Live-JSONL ins Archiv (idempotent, nur wenn Quelle neuer).
+    Gibt True zurück wenn tatsächlich kopiert wurde."""
+    if session.suffix != ".jsonl" or not session.exists():
+        return False
+    proj_name = session.parent.name
+    if proj_name == VIRTUAL_ARCHIV_NAME:
+        return False
+    dest = archive_path(proj_name, session.stem)
+    if dest.exists() and session.stat().st_mtime <= dest.stat().st_mtime:
+        return False
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(session, dest)  # preserves mtime
+    return True
+
+
+def is_archived(path: Path) -> bool:
+    """True wenn es eine Archiv-Kopie zur Session oder Notiz gibt."""
+    if path.suffix == ".md":
+        proj_name = note_project(path).name
+    else:
+        proj_name = path.parent.name
+    if proj_name == VIRTUAL_ARCHIV_NAME:
+        return False
+    return archive_path(proj_name, path.stem).exists()
+
+
+def resolved_jsonl(path: Path) -> Path | None:
+    """Beste JSONL-Quelle für Leseoperationen — Archiv bevorzugt, Live-Fallback.
+    - .md-Notiz: sucht Sibling-JSONL (Archiv bevorzugt, dann Live)
+    - Live-.jsonl: Archiv bevorzugt, sonst die Datei selbst
+    Gibt None zurück wenn es die Session weder live noch archiviert gibt (verwaist).
+    """
+    if path.suffix == ".md":
+        proj = note_project(path)
+        arch = archive_path(proj.name, path.stem)
+        if arch.exists():
+            return arch
+        live = proj / f"{path.stem}.jsonl"
+        return live if live.exists() else None
+    # .jsonl (oder ähnliches)
+    proj_name = path.parent.name
+    if proj_name != VIRTUAL_ARCHIV_NAME:
+        arch = archive_path(proj_name, path.stem)
+        if arch.exists():
+            return arch
+    return path if path.exists() else None
+
+
+def restore_session(archived_jsonl: Path, target_proj: Path) -> Path:
+    """Kopiert eine archivierte JSONL zurück ins Live-Projekt-Verzeichnis.
+    Setzt die mtime auf jetzt — Claude Codes Cleanup-Zähler wird zurückgesetzt."""
+    target_proj.mkdir(parents=True, exist_ok=True)
+    dest = target_proj / archived_jsonl.name
+    shutil.copy2(archived_jsonl, dest)
+    now = time.time()
+    os.utime(dest, (now, now))
+    return dest
+
+
+def get_all_notes() -> list[Path]:
+    """Alle UUID-benannten .md-Notizen aus allen Projekten, neueste zuerst."""
+    if not CLAUDE_PROJECTS.exists():
+        return []
+    notes = []
+    for proj in CLAUDE_PROJECTS.iterdir():
+        if not proj.is_dir() or proj.name == VIRTUAL_ARCHIV_NAME:
+            continue
+        mem_dir = proj / "memory"
+        if not mem_dir.is_dir():
+            continue
+        for md in mem_dir.glob("*.md"):
+            if _UUID_RE.match(md.stem):
+                notes.append(md)
+    return sorted(notes, key=lambda p: p.stat().st_mtime, reverse=True)
 
 ANSI_ESCAPE = re.compile(
     r'\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)'       # OSC (BEL- oder ST-Terminator) — z.B. Hyperlinks
@@ -343,6 +442,18 @@ def get_native_title(path: Path) -> str | None:
     return result or None
 
 
+def _first_md_heading(path: Path) -> str | None:
+    """Erste nicht-leere Zeile einer .md-Datei (ohne #-Präfix) als Fallback-Titel."""
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            s = line.strip().lstrip("#").strip()
+            if s:
+                return s[:120]
+    except OSError:
+        pass
+    return None
+
+
 def first_human_title(path: Path) -> str:
     """Erste Human-Message als Fallback-Titel."""
     try:
@@ -402,12 +513,17 @@ def get_session_cwd(path: Path) -> str | None:
 
 def get_all_projects() -> list[Path]:
     if not CLAUDE_PROJECTS.exists():
-        return []
-    projects = [p for p in CLAUDE_PROJECTS.iterdir() if p.is_dir()]
-    return sorted(projects, key=lambda p: len(list(p.glob("*.jsonl"))), reverse=True)
+        return [VIRTUAL_ARCHIV_PATH]
+    projects = [p for p in CLAUDE_PROJECTS.iterdir()
+                if p.is_dir() and p.name != VIRTUAL_ARCHIV_NAME]
+    projects.sort(key=lambda p: len(list(p.glob("*.jsonl"))), reverse=True)
+    # Virtuelles NOTIZEN-Projekt immer an Position 0
+    return [VIRTUAL_ARCHIV_PATH] + projects
 
 
 def get_sessions(proj_dir: Path) -> list[Path]:
+    if proj_dir.name == VIRTUAL_ARCHIV_NAME:
+        return get_all_notes()
     return sorted(proj_dir.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
 
 
@@ -496,7 +612,8 @@ def write_sync_turns(notes_file: Path, count: int):
 class State:
     def __init__(self):
         self.projects = get_all_projects()
-        self.proj_idx = 0
+        # Default: erstes echtes Projekt (Position 1), nicht das virtuelle NOTIZEN (Position 0).
+        self.proj_idx = 1 if len(self.projects) > 1 else 0
         self.thread_idx = 0
         self.thread_scroll = 0
         self.reader_lines: list[tuple] = []
@@ -521,21 +638,38 @@ class State:
 
     @property
     def status(self) -> str:
-        return ("[?/H]Hlp [/]Find [#]Tag [T]Tit [D]Del [A]Agt [R]/res"
-                " [E]ed [O]open [^E]Set [C]cp [S]Ses [F]Full [N]Not [M]mv [Q/ESC]Quit")
+        return ("[?/H]Hlp [/]Find [#]Tag [T]Tit [D]Del [A]Agt [L]Lend"
+                " [E]ed [U]pd [O]open [^E]Set [C]cp [S]Ses [F]Full [N]Not [M]mv [Q]")
+
+    def is_virtual_archiv(self) -> bool:
+        """True wenn das virtuelle NOTIZEN-Projekt aktiv ist."""
+        return (0 <= self.proj_idx < len(self.projects)
+                and self.projects[self.proj_idx].name == VIRTUAL_ARCHIV_NAME)
+
+    def current_proj_for_session(self, path: Path) -> Path:
+        """Projekt das zur aktuellen Session/Notiz gehört (virtuell-bewusst)."""
+        if path is not None and path.suffix == ".md":
+            return note_project(path)
+        return self.projects[self.proj_idx]
 
     def proj_panel_w(self) -> int:
         """Optimale Breite des Projekte-Panels: längster Name + Rand."""
         if not self.projects:
             return 14
-        max_name = max(len(shorten_slug(p.name)) for p in self.projects)
+        def _nm(p: Path) -> str:
+            return "ARCHIV" if p.name == VIRTUAL_ARCHIV_NAME else shorten_slug(p.name)
+        max_name = max(len(_nm(p)) for p in self.projects)
         # " ● name   NNN" → border(1) + " ●  "(3) + name + "  NNN"(4) + border(1) = +9
         return max(14, max_name + 9)
 
     def sessions(self) -> list[Path]:
         idx = self.proj_idx
         if idx not in self._sessions_cache:
-            self._sessions_cache[idx] = get_sessions(self.projects[idx])
+            # Alphabetisch absteigend nach Titel (z.B. "XED03..." vor "AI026..." vor "AI001...").
+            raw = get_sessions(self.projects[idx])
+            self._sessions_cache[idx] = sorted(
+                raw, key=lambda p: self.title(p).lower(), reverse=True
+            )
         return self._sessions_cache[idx]
 
     def session_tokens(self, path: Path) -> tuple[int, int]:
@@ -545,9 +679,14 @@ class State:
         output_tokens_total = Summe aller output_tokens (tatsächlich generiert, kein Double-Count)
         """
         if path not in self._tokens_cache:
+            # Archiv-bevorzugt: lies Tokens aus der besten verfügbaren Quelle.
+            read_path = resolved_jsonl(path)
+            if read_path is None:
+                self._tokens_cache[path] = (0, 0)
+                return (0, 0)
             inp_last = out_total = 0
             try:
-                with open(path, encoding="utf-8") as f:
+                with open(read_path, encoding="utf-8") as f:
                     for line in f:
                         try:
                             obj = json.loads(line)
@@ -566,12 +705,18 @@ class State:
         return self._tokens_cache[path]
 
     def session_tags(self, path: Path) -> list[str]:
-        """Tags für eine Session aus tags.json (gecacht, alle Sessions des Projekts auf einmal)."""
+        """Tags für eine Session aus tags.json (gecacht). Virtual-Notes-bewusst."""
         if path not in self._tags_cache:
-            all_tags = load_tags(self.projects[self.proj_idx])
-            for s in self.sessions():
-                if s not in self._tags_cache:
-                    self._tags_cache[s] = all_tags.get(s.stem, [])
+            if self.is_virtual_archiv():
+                # Jede Notiz kann aus einem anderen Projekt stammen — einzeln laden.
+                proj = self.current_proj_for_session(path)
+                all_tags = load_tags(proj)
+                self._tags_cache[path] = all_tags.get(path.stem, [])
+            else:
+                all_tags = load_tags(self.projects[self.proj_idx])
+                for s in self.sessions():
+                    if s not in self._tags_cache:
+                        self._tags_cache[s] = all_tags.get(s.stem, [])
         return self._tags_cache.get(path, [])
 
     def tag_current(self, tags_str: str) -> str:
@@ -580,19 +725,23 @@ class State:
         if not path:
             return "Keine Session ausgewählt."
         tags = [t.strip().lstrip("#").lower() for t in tags_str.split(",") if t.strip()]
-        all_tags = load_tags(self.projects[self.proj_idx])
+        proj = self.current_proj_for_session(path)
+        all_tags = load_tags(proj)
         if tags:
             all_tags[path.stem] = tags
         else:
             all_tags.pop(path.stem, None)
-        save_tags(self.projects[self.proj_idx], all_tags)
+        save_tags(proj, all_tags)
         self._tags_cache[path] = tags
         return "Tags: " + (" ".join(f"#{t}" for t in tags) if tags else "(keine)")
 
     def _notes_text(self, path: Path) -> str:
         """Gibt den rohen Notiz-Text für eine Session zurück (gecacht, ANSI-bereinigt)."""
         if path not in self._notes_text_cache:
-            notes_file = self.projects[self.proj_idx] / "memory" / f"{path.stem}.md"
+            if path.suffix == ".md":
+                notes_file = path
+            else:
+                notes_file = self.projects[self.proj_idx] / "memory" / f"{path.stem}.md"
             try:
                 raw = notes_file.read_text(encoding="utf-8") if notes_file.exists() else ""
             except OSError:
@@ -614,11 +763,21 @@ class State:
                 if q in self.title(s).lower() or q in self._notes_text(s)]
 
     def title(self, path: Path) -> str:
-        # Priorität: /rename (JSONL) > [t] (titles.json) > erste Human-Message
+        # Priorität: /rename (JSONL) > [t] (titles.json) > erste Human-Message / Notiz-Überschrift
+        # Archiv-bevorzugt: native-Title und first-human-title aus der besten Quelle.
         if path not in self._title_cache:
-            native  = get_native_title(path)
-            tui     = load_titles(self.projects[self.proj_idx]).get(path.stem)
-            self._title_cache[path] = native or tui or first_human_title(path)
+            src = resolved_jsonl(path)
+            if path.suffix == ".md":
+                proj = note_project(path)
+                native   = get_native_title(src) if src is not None else None
+                tui      = load_titles(proj).get(path.stem)
+                fallback = first_human_title(src) if src is not None else _first_md_heading(path)
+                self._title_cache[path] = native or tui or fallback or "(verwaiste Notiz)"
+            else:
+                native  = get_native_title(src) if src is not None else None
+                tui     = load_titles(self.projects[self.proj_idx]).get(path.stem)
+                fallback = first_human_title(src) if src is not None else "(leer)"
+                self._title_cache[path] = native or tui or fallback
         return self._title_cache[path]
 
     def current_session(self) -> Path | None:
@@ -628,7 +787,19 @@ class State:
         return None
 
     def _build_reader_lines(self, path: Path, width: int) -> list[tuple]:
-        turns = load_thread(path)
+        # Archiv-bevorzugt lesen. Bei verwaister Notiz: Inhalt als synthetischer Turn.
+        src = resolved_jsonl(path)
+        if src is not None:
+            turns = load_thread(src)
+        elif path.suffix == ".md":
+            try:
+                content = strip_ansi(path.read_text(encoding="utf-8"))
+            except OSError:
+                content = "(Notiz nicht lesbar)"
+            turns = [{"role": "user",
+                      "text": f"(verwaiste Notiz — Original-Session wurde gelöscht)\n\n{content}"}]
+        else:
+            turns = []
         lines = []
         w = max(width - 4, 20)
         for turn in turns:
@@ -677,8 +848,11 @@ class State:
 
     def _build_notes_lines(self, path: Path, width: int) -> list[tuple]:
         """Notizen aus memory/<uuid>.md — ANSI-bereinigt, Markdown-gerendert."""
-        proj = self.projects[self.proj_idx]
-        notes_file = proj / "memory" / f"{path.stem}.md"
+        if path.suffix == ".md":
+            notes_file = path
+        else:
+            proj = self.projects[self.proj_idx]
+            notes_file = proj / "memory" / f"{path.stem}.md"
         lines = []
         w = max(width - 4, 10)
         if not notes_file.exists():
@@ -817,18 +991,21 @@ class State:
         path = self.current_session()
         if not path:
             return "Kein Thread ausgewählt."
-        # 1) Nativ ins JSONL schreiben (wie /rename) → sichtbar in Claude Code + ZED
-        try:
-            with open(path, "a", encoding="utf-8") as f:
-                record = {"type": "custom-title", "customTitle": new_title,
-                          "sessionId": path.stem}
-                f.write(json.dumps(record, ensure_ascii=False) + "\n")
-        except OSError:
-            pass
+        proj = self.current_proj_for_session(path)
+        # 1) Nativ ins JSONL schreiben (wie /rename) — nur wenn JSONL existiert
+        jsonl = proj / f"{path.stem}.jsonl" if path.suffix == ".md" else path
+        if jsonl.exists():
+            try:
+                with open(jsonl, "a", encoding="utf-8") as f:
+                    record = {"type": "custom-title", "customTitle": new_title,
+                              "sessionId": path.stem}
+                    f.write(json.dumps(record, ensure_ascii=False) + "\n")
+            except OSError:
+                pass
         # 2) titles.json aktualisieren (TUI-Fallback)
-        titles = load_titles(self.projects[self.proj_idx])
+        titles = load_titles(proj)
         titles[path.stem] = new_title
-        save_titles(self.projects[self.proj_idx], titles)
+        save_titles(proj, titles)
         self._title_cache[path] = new_title
         return f"Umbenannt → {new_title[:50]}"
 
@@ -837,22 +1014,33 @@ class State:
         if not path:
             return "Kein Thread ausgewählt."
         name = path.name
+        proj = self.current_proj_for_session(path)
+        # Im NOTIZEN-Virtual: nur die .md-Datei löschen, JSONL bleibt.
         path.unlink()
-        uuid_dir = path.parent / path.stem
-        if uuid_dir.exists() and uuid_dir.is_dir():
-            shutil.rmtree(uuid_dir)
-        titles = load_titles(self.projects[self.proj_idx])
+        if path.suffix == ".jsonl":
+            uuid_dir = path.parent / path.stem
+            if uuid_dir.exists() and uuid_dir.is_dir():
+                shutil.rmtree(uuid_dir)
+        titles = load_titles(proj)
         titles.pop(path.stem, None)
-        save_titles(self.projects[self.proj_idx], titles)
+        save_titles(proj, titles)
         self._sessions_cache.pop(self.proj_idx, None)
         self._title_cache.pop(path, None)
+        self._notes_text_cache.pop(path, None)
         sessions = self.filtered_sessions()
         self.thread_idx = min(self.thread_idx, max(0, len(sessions) - 1))
         self.reader_lines = []
         return f"Gelöscht: {name}"
 
-    def memory_path(self) -> Path:
+    def memory_path(self) -> Path | None:
         proj = self.projects[self.proj_idx]
+        if proj.name == VIRTUAL_ARCHIV_NAME:
+            # Im virtuellen NOTIZEN-Projekt ist MEMORY.md kontextabhängig
+            # von der aktuellen Session — falls eine ausgewählt ist, nimm deren Projekt.
+            sess = self.current_session()
+            if sess is None:
+                return None
+            proj = self.current_proj_for_session(sess)
         mem_dir = proj / "memory"
         mem_dir.mkdir(exist_ok=True)
         p = mem_dir / "MEMORY.md"
@@ -861,30 +1049,39 @@ class State:
                          encoding="utf-8")
         return p
 
-    def notes_path(self) -> Path | None:
-        """Notiz-Datei für die aktuelle Session: memory/<uuid>.md"""
-        path = self.current_session()
+    def notes_path(self, session: Path | None = None) -> Path | None:
+        """Notiz-Datei zur Session (oder zur aktuellen Session): memory/<uuid>.md"""
+        path = session if session is not None else self.current_session()
         if not path:
             return None
-        proj = self.projects[self.proj_idx]
+        if path.suffix == ".md":
+            # Virtuell: Session IST bereits die Notiz.
+            return path
+        proj = self.current_proj_for_session(path)
         mem_dir = proj / "memory"
         mem_dir.mkdir(exist_ok=True)
         return mem_dir / f"{path.stem}.md"
 
-    def prefill_notes(self, notes_file: Path, width: int):
-        """Füllt leere Notiz-Datei mit dem Session-Transcript als Markdown vor."""
-        path = self.current_session()
+    def prefill_notes(self, notes_file: Path, width: int, session: Path | None = None):
+        """Füllt leere Notiz-Datei mit dem Session-Transcript als Markdown vor.
+        Vor dem Prefill wird die Live-JSONL ins XED-Archiv kopiert (→ Bibliothek)."""
+        path = session if session is not None else self.current_session()
         if not path:
             return
+        # In ARCHIV-Virtual: path ist bereits die .md-Datei — kein Prefill nötig.
+        if path.suffix == ".md":
+            return
+        # Bibliotheks-Prinzip: JSONL bei Notiz-Erstellung ins Archiv kopieren.
+        archive_session(path)
         title = self.title(path)
         mtime = datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
-        turns = load_thread(path)
+        turns = load_thread(resolved_jsonl(path) or path)
 
         lines = [
             f"# {title}",
             f"Session: {path.stem}",
             f"Datum:   {mtime}",
-            f"Projekt: {self.projects[self.proj_idx].name}",
+            f"Projekt: {self.current_proj_for_session(path).name}",
             "",
             "---",
             "",
@@ -903,13 +1100,19 @@ class State:
         notes_file.write_text("\n".join(lines), encoding="utf-8")
         write_sync_turns(notes_file, len(turns))   # Sync-Status setzen
 
-    def append_new_turns(self, notes_file: Path) -> str:
-        """Hängt Turns die seit dem letzten Sync neu hinzukamen an die Notiz-Datei an."""
-        path = self.current_session()
+    def append_new_turns(self, notes_file: Path, session: Path | None = None) -> str:
+        """Hängt Turns die seit dem letzten Sync neu hinzukamen an die Notiz-Datei an.
+        Ruft dabei archive_session() auf — Bibliothek und Katalog bleiben synchron."""
+        path = session if session is not None else self.current_session()
         if not path:
             return "  Keine Session ausgewählt."
+        if path.suffix == ".md":
+            # ARCHIV-Virtual: path IST die Notiz — kein JSONL-Sync möglich.
+            return "  Sync nicht verfügbar im ARCHIV-Modus."
+        # Bibliotheks-Prinzip: JSONL bei jedem Notiz-Update ins Archiv kopieren.
+        archive_session(path)
         synced = read_sync_turns(notes_file)
-        turns = load_thread(path)
+        turns = load_thread(resolved_jsonl(path) or path)
         if synced is None:
             # Alte Notiz ohne .sync — initialisieren: alle aktuellen Turns als bereits synced markieren
             write_sync_turns(notes_file, len(turns))
@@ -931,10 +1134,81 @@ class State:
         write_sync_turns(notes_file, len(turns))
         return f"  {len(new_turns)} neue Turn(s) angehängt."
 
+    def update_all_notes(self, width: int) -> str:
+        """Batch-Update aller Notizen im aktuellen Projekt (oder über alle Projekte in NOTIZEN-Virtual).
+
+        - Fehlende Notizen werden mit Transcript-Prefill angelegt.
+        - Bestehende Notizen mit .sync bekommen neue Turns angehängt, wenn das
+          JSONL neuer ist als die Notiz.
+        - Ohne .sync (alte Notizen) werden übersprungen — Respekt vor manueller Pflege.
+        - ALLE Sessions mit Live-JSONL werden ins XED-Archiv kopiert (auch aktuelle).
+        """
+        sessions = self.sessions()
+        if not sessions:
+            return "  Keine Sessions im aktuellen Projekt."
+        created = updated = current_ = skipped = orphan = archived = 0
+        for sess in sessions:
+            # Quelle (JSONL) und Ziel (.md) je nach Kontext bestimmen.
+            if sess.suffix == ".md":
+                # ARCHIV-Virtual: sess IST die Notiz, JSONL-Quelle archiv-bevorzugt.
+                jsonl_source = resolved_jsonl(sess)
+                if jsonl_source is None:
+                    orphan += 1
+                    continue
+                target = sess
+            else:
+                target = self.notes_path(sess)
+                if target is None:
+                    continue
+                jsonl_source = sess
+
+            # Bibliothek auffüllen: auch Sessions ohne Notiz-Änderung archivieren,
+            # solange noch eine Live-JSONL existiert.
+            if sess.suffix != ".md" and archive_session(sess):
+                archived += 1
+
+            if not target.exists() or target.stat().st_size == 0:
+                self.prefill_notes(target, width, session=jsonl_source)
+                created += 1
+                continue
+
+            if read_sync_turns(target) is None:
+                # Alte Notiz ohne .sync — nicht automatisch anfassen.
+                skipped += 1
+                continue
+            if jsonl_source.stat().st_mtime <= target.stat().st_mtime:
+                current_ += 1
+                continue
+            msg = self.append_new_turns(target, session=jsonl_source)
+            if "Turn(s) angehängt" in msg:
+                updated += 1
+            else:
+                current_ += 1
+
+        # Caches invalidieren (Notizen-Text, Session-Reihenfolge).
+        self._notes_text_cache.clear()
+        self._sessions_cache.pop(self.proj_idx, None)
+
+        parts = []
+        if created: parts.append(f"{created} neu")
+        if updated: parts.append(f"{updated} erneuert")
+        if current_: parts.append(f"{current_} aktuell")
+        if archived: parts.append(f"{archived} archiviert")
+        if skipped: parts.append(f"{skipped} ohne Sync")
+        if orphan:  parts.append(f"{orphan} verwaist")
+        if not parts: parts = ["nichts zu tun"]
+        return "  Bibliothek: " + " · ".join(parts)
+
     def backup_current(self) -> str:
         path = self.current_session()
         if not path:
             return "Kein Thread ausgewählt."
+        if path.suffix == ".md":
+            # NOTIZEN-Virtual: Notiz backupen (nicht JSONL).
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            dest = path.parent / f"{path.stem}_backup_{ts}.md"
+            shutil.copy2(path, dest)
+            return f"Backup: {dest.name}"
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         dest = path.parent / f"{path.stem}_backup_{ts}.jsonl"
         shutil.copy2(path, dest)
@@ -1206,9 +1480,14 @@ def draw_projects(win, state: State):
         y = i + 1
         if y >= h - 1:
             break
-        name = shorten_slug(proj.name)[:w - 6]
-        mem_mark = "●" if (proj / "memory").exists() else " "
-        sess_count = len(list(proj.glob("*.jsonl")))
+        if proj.name == VIRTUAL_ARCHIV_NAME:
+            name = "ARCHIV"[:w - 6]
+            mem_mark = "★"
+            sess_count = len(get_all_notes())
+        else:
+            name = shorten_slug(proj.name)[:w - 6]
+            mem_mark = "●" if (proj / "memory").exists() else " "
+            sess_count = len(list(proj.glob("*.jsonl")))
         line = f" {mem_mark} {name:<{w-9}} {sess_count:>3}"[:w-2]
         attr = curses.color_pair(9) | curses.A_BOLD if i == state.proj_idx else curses.color_pair(2)
         try:
@@ -1243,6 +1522,7 @@ def draw_threads(win, state: State):
         state.thread_scroll = state.thread_idx - visible + 1
 
     tag_col_w = 11 if w >= 70 else 0   # " #hvd #bug" — nur bei breitem Terminal
+    virtual = state.is_virtual_archiv()
 
     for row, i in enumerate(range(state.thread_scroll, state.thread_scroll + visible)):
         y = row + 1
@@ -1255,8 +1535,11 @@ def draw_threads(win, state: State):
         tok_str = f"{out_tok/1000:>4.0f}k" if out_tok >= 1000 else f"{out_tok:>4}t"
         title = state.title(s)
         tags = state.session_tags(s)
+        archived_ok = is_archived(s)
 
-        prefix = f" {nr} {date:<8} "
+        # Bibliotheks-Marker: grüner Punkt = im Archiv, leer = nur Live/ungesichert
+        mark = "●" if archived_ok else " "
+        prefix = f" {nr} {date:<8} {mark} "
         suffix = f" {tok_str}"
         if tag_col_w > 0:
             tag_text = " ".join(f"#{t}" for t in tags[:2])[:tag_col_w - 1]
@@ -1264,14 +1547,24 @@ def draw_threads(win, state: State):
         else:
             tag_display = ""
         title_w = max(4, w - len(prefix) - len(suffix) - len(tag_display) - 2)
-        title_short = title[:title_w]
+        if virtual:
+            # Projekt-Kürzel in fixer Breite (8 Zeichen) → nachfolgende Spalte bleibt bündig.
+            proj_tag = f"{shorten_slug(note_project(s).name):<8.8}"
+            title_short = f"[{proj_tag}] {title}"[:title_w]
+        else:
+            title_short = title[:title_w]
 
         is_sel = (i == state.thread_idx)
-        row_attr = curses.color_pair(9) | curses.A_BOLD if is_sel else curses.color_pair(4)
-        tag_attr = curses.color_pair(9) | curses.A_BOLD if is_sel else curses.color_pair(3)
+        row_attr  = curses.color_pair(9) | curses.A_BOLD if is_sel else curses.color_pair(4)
+        tag_attr  = curses.color_pair(9) | curses.A_BOLD if is_sel else curses.color_pair(3)
+        mark_attr = curses.color_pair(9) | curses.A_BOLD if is_sel else curses.color_pair(3)
         pre = f"{prefix}{title_short:<{title_w}}"
         try:
             win.addstr(y, 1, pre, row_attr)
+            # Marker nachträglich grün überzeichnen (an bekannter Position im prefix)
+            if archived_ok:
+                mark_x = 1 + len(f" {nr} {date:<8} ")
+                win.addstr(y, mark_x, mark, mark_attr)
             x = 1 + len(pre)
             if tag_display:
                 win.addstr(y, x, tag_display, tag_attr)
@@ -1771,6 +2064,10 @@ def main(stdscr, continue_data: dict | None = None):
         if key == -1:
             continue
 
+        # Jede Taste räumt eine stehengebliebene Flash-Message sofort weg —
+        # der Key-Handler darf direkt danach ggf. eine neue setzen.
+        flash_timer = 0
+
         focus = state.focus
 
         # ── Such-Modus ────────────────────────────────────────────────────────
@@ -1993,8 +2290,8 @@ def main(stdscr, continue_data: dict | None = None):
                 flash_msg = "  Keine Session ausgewählt."
             flash_timer = 30
 
-        elif key in (ord("u"), ord("U")):
-            # [U] Notiz manuell mit neuen Turns aus der JSONL aktualisieren
+        elif key == ord("u"):
+            # [u] Aktuelle Notiz mit neuen Turns aus der JSONL aktualisieren
             target = state.notes_path()
             if target and target.exists() and target.stat().st_size > 0:
                 flash_msg = state.append_new_turns(target)
@@ -2002,10 +2299,16 @@ def main(stdscr, continue_data: dict | None = None):
                 state.refresh_notes(w)
                 state.notes_scroll = len(state.notes_lines)   # ans Ende scrollen
             elif target and (not target.exists() or target.stat().st_size == 0):
-                flash_msg = "  Noch keine Notiz — [E] zum Erstellen."
+                flash_msg = "  Noch keine Notiz — [E] zum Erstellen oder [U] für Batch-Update."
             else:
                 flash_msg = "  Keine Session ausgewählt."
             flash_timer = 40
+
+        elif key == ord("U"):
+            # [U] Batch-Update: alle Notizen im aktuellen Projekt aktualisieren/anlegen
+            flash_msg = state.update_all_notes(w)
+            state.refresh_notes(w)
+            flash_timer = 60
 
         elif key in (ord("s"), ord("S")):
             flash_msg = state.refresh()
@@ -2015,11 +2318,24 @@ def main(stdscr, continue_data: dict | None = None):
             flash_timer = 30
 
         elif key in (ord("a"), ord("A")):
-            # Start Claude Code with --resume <uuid> — CWD from session metadata
+            # Start Claude Code with --resume <uuid> — CWD from session metadata.
+            # Voraussetzung: Live-JSONL muss in ~/.claude/projects/<proj>/ existieren.
+            # Fehlt sie (nur Archiv vorhanden) → Hinweis auf [L] Lend.
             path = state.current_session()
             if path:
                 uuid = path.stem
-                cwd = get_session_cwd(path)
+                if path.suffix == ".md":
+                    live_jsonl = note_project(path) / f"{uuid}.jsonl"
+                else:
+                    live_jsonl = path
+                if not live_jsonl.exists():
+                    if is_archived(path):
+                        flash_msg = "  Nur im Archiv — erst [L] Lend drücken, dann [a] starten."
+                    else:
+                        flash_msg = "  Verwaiste Notiz — weder Live noch Archiv, kein Resume möglich."
+                    flash_timer = 40
+                    continue
+                cwd = get_session_cwd(live_jsonl)
                 curses.endwin()
                 subprocess.run(["claude", "--resume", uuid], cwd=cwd)
                 stdscr.clear()
@@ -2027,6 +2343,31 @@ def main(stdscr, continue_data: dict | None = None):
                 state.force_redraw = True
                 flash_msg = f"  Agent done: {uuid[:8]}…"
                 flash_timer = 30
+
+        elif key == ord("L"):
+            # [L] Lend — eine archivierte Session zurück ins Live-Verzeichnis kopieren.
+            # Setzt mtime auf jetzt, damit Claude Codes Cleanup-Zähler resettet.
+            path = state.current_session()
+            if not path:
+                flash_msg = "  Keine Session ausgewählt."
+            else:
+                if path.suffix == ".md":
+                    target_proj = note_project(path)
+                else:
+                    target_proj = state.current_proj_for_session(path)
+                arch = archive_path(target_proj.name, path.stem)
+                if not arch.exists():
+                    flash_msg = "  Nicht im Archiv — nichts zum Ausleihen."
+                else:
+                    try:
+                        dest = restore_session(arch, target_proj)
+                        state._sessions_cache.clear()
+                        state._title_cache.pop(path, None)
+                        state._tokens_cache.pop(path, None)
+                        flash_msg = f"  Ausgeliehen: {dest.name[:36]} · mtime refresht"
+                    except OSError as e:
+                        flash_msg = f"  Fehler beim Ausleihen: {e}"
+            flash_timer = 50
 
         elif key == ord("/"):
             state.search_active = True
@@ -2172,6 +2513,8 @@ Session-Management
   t / T            Titel setzen (persistiert in memory/titles.json + JSONL)
   d / D            Session löschen (Bestätigung: "delete" tippen)
   a / A            Claude Code mit --resume <uuid> starten (CWD aus Session-Metadaten)
+  L                Lend — archivierte Session aus XED-Bibliothek zurück ins ~/.claude/
+                   Verzeichnis kopieren (mtime wird aktualisiert → Cleanup-Reset)
   r / R            /resume <uuid> in Zwischenablage (für laufendes Claude Code)
 
 Suche & Tags
@@ -2184,7 +2527,8 @@ Notizen
                    → Neue Notiz: Transcript als Prefill + .sync anlegen
                    → Bestehende Notiz: neue Turns automatisch anhängen (wenn .sync vorhanden)
   o / O            Notiz in Standard-App öffnen (xdg-open, z.B. Typora/Obsidian)
-  u / U            Notiz manuell mit neuen Turns aktualisieren (ohne Editor zu öffnen)
+  u                Notiz manuell mit neuen Turns aktualisieren (ohne Editor zu öffnen)
+  U                Batch: ALLE Notizen im Projekt aktualisieren (+ fehlende anlegen)
   c / C            Notiz in Zwischenablage (wl-copy / xclip / xsel)
 
 Sonstiges
@@ -2231,6 +2575,8 @@ Session Management
   t / T            Set title (persists in memory/titles.json + JSONL)
   d / D            Delete session (confirm by typing "delete")
   a / A            Start Claude Code with --resume <uuid> (CWD from session metadata)
+  L                Lend — restore archived session from XED library back into
+                   ~/.claude/ (mtime refreshed → Claude Code cleanup timer reset)
   r / R            /resume <uuid> to clipboard (for running Claude Code)
 
 Search & Tags
@@ -2243,7 +2589,8 @@ Notes
                    → New note: transcript as prefill + create .sync
                    → Existing note: auto-append new turns (if .sync exists)
   o / O            Open note in default app (xdg-open, e.g. Typora/Obsidian)
-  u / U            Update note manually with new turns (without opening editor)
+  u                Update note manually with new turns (without opening editor)
+  U                Batch: update ALL notes in project (+ create missing ones)
   c / C            Copy note to clipboard (wl-copy / xclip / xsel)
 
 Other
@@ -2290,6 +2637,8 @@ Gestion des sessions
   t / T            Définir titre (persistant dans memory/titles.json + JSONL)
   d / D            Supprimer session (confirmer en tapant "delete")
   a / A            Lancer Claude Code avec --resume <uuid> (CWD des métadonnées)
+  L                Lend — restaurer la session archivée dans ~/.claude/ (mtime
+                   actualisé → compteur de nettoyage Claude Code réinitialisé)
   r / R            /resume <uuid> vers presse-papiers (pour Claude Code en cours)
 
 Recherche & Étiquettes
@@ -2302,7 +2651,8 @@ Notes
                    → Nouvelle note: transcript comme préfill + créer .sync
                    → Note existante: ajouter nouveaux tours automatiquement
   o / O            Ouvrir note dans l'app par défaut (xdg-open, ex. Typora/Obsidian)
-  u / U            Mettre à jour note manuellement (sans ouvrir l'éditeur)
+  u                Mettre à jour note manuellement (sans ouvrir l'éditeur)
+  U                Lot : mettre à jour TOUTES les notes (+ créer les manquantes)
   c / C            Copier note dans presse-papiers (wl-copy / xclip / xsel)
 
 Autre
@@ -2349,6 +2699,8 @@ XED /TUI v1 — キーバインド完全リファレンス
   t / T            タイトル設定 (memory/titles.json + JSONL に保存)
   d / D            セッション削除 ("delete" と入力して確認)
   a / A            Claude Code を --resume <uuid> で起動
+  L                Lend — アーカイブ済みセッションを ~/.claude/ に復元
+                   (mtime を更新 → Claude Code のクリーンアップタイマーをリセット)
   r / R            /resume <uuid> をクリップボードにコピー
 
 検索 & タグ
@@ -2361,7 +2713,8 @@ XED /TUI v1 — キーバインド完全リファレンス
                    → 新規ノート: トランスクリプトをプリフィル + .sync 作成
                    → 既存ノート: 新しいターンを自動追記 (.sync がある場合)
   o / O            標準アプリでノートを開く (xdg-open、例: Typora/Obsidian)
-  u / U            エディタを開かずにノートを手動更新
+  u                エディタを開かずにノートを手動更新
+  U                一括：プロジェクト内のすべてのノートを更新（無いものは作成）
   c / C            ノートをクリップボードにコピー (wl-copy / xclip / xsel)
 
 その他
@@ -2408,6 +2761,8 @@ Gestión de sesiones
   t / T            Establecer título (persiste en memory/titles.json + JSONL)
   d / D            Eliminar sesión (confirmar escribiendo "delete")
   a / A            Iniciar Claude Code con --resume <uuid> (CWD de metadatos)
+  L                Lend — restaurar sesión archivada en ~/.claude/ (mtime
+                   actualizado → reset del contador de limpieza de Claude Code)
   r / R            /resume <uuid> al portapapeles (para Claude Code en ejecución)
 
 Búsqueda & Etiquetas
@@ -2420,7 +2775,8 @@ Notas
                    → Nueva nota: transcript como prefill + crear .sync
                    → Nota existente: añadir nuevos turnos automáticamente
   o / O            Abrir nota en app predeterminada (xdg-open, ej. Typora/Obsidian)
-  u / U            Actualizar nota manualmente con nuevos turnos
+  u                Actualizar nota manualmente con nuevos turnos
+  U                Lote: actualizar TODAS las notas del proyecto (+ crear las faltantes)
   c / C            Copiar nota al portapapeles (wl-copy / xclip / xsel)
 
 Otros

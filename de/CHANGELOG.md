@@ -4,6 +4,23 @@
 
 ---
 
+## [1.25.0] — 2026-04-14
+
+### Neu
+- **Virtuelles `★ ARCHIV`-Projekt** ganz oben im Projekte-Panel — zeigt alle Notizen aus allen Projekten, auch verwaiste (Original-Session von Claude Code bereits gelöscht)
+- **XED-Bibliothek unter `~/.xed/tui/archive/<proj>/<uuid>.jsonl`** — Schatten-Kopien der Claude-Code-Sessions, überleben Claudes Retention-Cleanup
+- **Auto-Archivierung** bei `[e]` / `[E]` (Notiz bearbeiten) und `[u]` / `[U]` (Notiz aktualisieren) — jede Kuratierung sichert die Quell-Session
+- **`[U]` Batch-Update** — alle Notizen im aktuellen Projekt in einem Rutsch aktualisieren/anlegen (N neu · N erneuert · N archiviert)
+- **`[L]` Lend** — archivierte Session zurück ins `~/.claude/projects/<proj>/` kopieren, mtime frisch (resettet Claude Codes Cleanup-Zähler)
+- Grüner `●`-Punkt in der Sessions-Liste — visuelle Bestätigung: diese Session liegt sicher in der XED-Bibliothek
+
+### Geändert
+- Sessions alphabetisch absteigend nach Titel sortiert (vorher: mtime) — neueste nummerierte Sessions wie `XED03-...` stehen oben
+- Reader-Preview und Titel-Auflösung bevorzugen die archivierte Kopie gegenüber der Live-JSONL
+
+### Behoben
+- Flash-Nachrichten (z.B. „Notiz aktuell") verschwinden jetzt sofort beim nächsten Tastendruck statt zu überdauern
+
 ## [1.23.0] — 2026-03-10
 
 ### Neu

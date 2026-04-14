@@ -6,6 +6,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ---
 
+## [1.25.0] — 2026-04-14
+
+### Added
+- **Virtual `★ ARCHIV` project** at the top of the project panel — browse all notes across all projects, including orphaned ones whose source sessions Claude Code has already cleaned up
+- **XED library at `~/.xed/tui/archive/<proj>/<uuid>.jsonl`** — shadow copies of Claude Code sessions, survive Claude's retention cleanup
+- **Auto-archiving** on `[e]` / `[E]` (edit note) and `[u]` / `[U]` (update note) — every curation act preserves the source session
+- **`[U]` batch update** — update/create all notes in the current project in one pass (N new · N refreshed · N archived)
+- **`[L]` Lend** — restore an archived session back into `~/.claude/projects/<proj>/` with fresh mtime (resets Claude Code's cleanup timer)
+- Green `●` marker in sessions list — visual confirmation that a session is safely in the XED library
+
+### Changed
+- Sessions sorted alphabetically descending by title (was: mtime) — newest numbered sessions like `XED03-...` appear first
+- Reader preview and title resolution now prefer the archived copy over the live JSONL when both exist
+
+### Fixed
+- Flash messages (e.g. "Notiz aktuell") now clear immediately on any keypress instead of lingering
+
 ## [1.23.0] — 2026-03-10
 
 ### Added
