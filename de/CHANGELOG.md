@@ -4,6 +4,11 @@
 
 ---
 
+## [1.26.2] — 2026-04-15
+
+### Behoben
+- **Titel nach XED-Neustart veraltet, wenn die Session eine ältere Archivkopie hat.** `title()` las den nativen `custom-title` über `resolved_jsonl()` — das ist archiv-bevorzugt. Wenn XED eine Session _nach_ dem letzten Archiv-Snapshot umbenannt hatte, behielt das Archiv den alten `custom-title`; beim nächsten XED-Start gewann das Archiv wieder und der alte Titel erschien sowohl in der normalen Projekt-Liste als auch in `★ ARCHIV`. v1.26.2 liest den nativen Titel aus der **Live**-JSONL, wann immer sie existiert (Source-of-Truth für aktuelle Renames), und fällt nur bei verwaisten Sessions auf das Archiv zurück. Content-Reader-Pfade (`first_human_title`, `_build_reader_lines`) bleiben archiv-bevorzugt (Cleanup-Resilienz nach Claudes 90-Tage-Lifecycle).
+
 ## [1.26.1] — 2026-04-15
 
 ### Behoben

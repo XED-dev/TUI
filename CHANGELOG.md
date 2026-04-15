@@ -6,6 +6,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ---
 
+## [1.26.2] — 2026-04-15
+
+### Fixed
+- **Title stale after restart when a session has an older archive copy.** `title()` resolved the native `custom-title` via `resolved_jsonl()`, which is archive-preferred. When XED renamed a session after the last archive snapshot, the archive kept the old `custom-title` — on next XED start the archive won again and the old label reappeared in both the normal project list and the `★ ARCHIV` view. v1.26.2 reads the native title from the **live** JSONL whenever it exists (source of truth for current renames) and only falls back to the archive for orphaned sessions. Content-reader paths (`first_human_title`, `_build_reader_lines`) stay archive-preferred for 90-day-cleanup resilience.
+
 ## [1.26.1] — 2026-04-15
 
 ### Fixed

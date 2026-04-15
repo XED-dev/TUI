@@ -44,7 +44,7 @@ from datetime import datetime
 from pathlib import Path
 
 CLAUDE_PROJECTS = Path.home() / ".claude" / "projects"
-VERSION = "v1.26.1"
+VERSION = "v1.26.2"
 
 # XED /TUI eigenes Territorium (außerhalb ~/.claude/ — Claude Code darf hier
 # nichts anfassen). Später auch SQLite-DB unter db/, Cache, etc.
@@ -979,19 +979,30 @@ class State:
 
     def title(self, path: Path) -> str:
         # Priorität: /rename (JSONL) > [t] (titles.json) > erste Human-Message / Notiz-Überschrift
-        # Archiv-bevorzugt: native-Title und first-human-title aus der besten Quelle.
+        #
+        # v1.26.2 Bugfix: Native-Title (custom-title-Record) IMMER aus der Live-JSONL
+        # lesen — sie ist die Source-of-Truth für aktuelle Renames. Das Archiv ist
+        # eine Schatten-Kopie und kann ältere custom-title-Records enthalten,
+        # solange seit dem letzten [e]/[u]/[U] umbenannt wurde. Vorher las XED den
+        # Title aus resolved_jsonl() (archiv-bevorzugt) und zeigte deshalb nach
+        # einem Restart wieder den veralteten Stand.
+        # Content-Reader-Pfade (first_human_title, _build_reader_lines, …) bleiben
+        # archiv-bevorzugt (Cleanup-Resilienz nach Claude Codes 90-Tage-Lifecycle).
         if path not in self._title_cache:
-            src = resolved_jsonl(path)
+            live_jsonl = (note_project(path) / f"{path.stem}.jsonl"
+                          if path.suffix == ".md" else path)
+            title_src   = live_jsonl if live_jsonl.exists() else resolved_jsonl(path)
+            content_src = resolved_jsonl(path)
             if path.suffix == ".md":
                 proj = note_project(path)
-                native   = get_native_title(src) if src is not None else None
+                native   = get_native_title(title_src) if title_src is not None else None
                 tui      = load_titles(proj).get(path.stem)
-                fallback = first_human_title(src) if src is not None else _first_md_heading(path)
+                fallback = first_human_title(content_src) if content_src is not None else _first_md_heading(path)
                 self._title_cache[path] = native or tui or fallback or "(verwaiste Notiz)"
             else:
-                native  = get_native_title(src) if src is not None else None
+                native  = get_native_title(title_src) if title_src is not None else None
                 tui     = load_titles(self.projects[self.proj_idx]).get(path.stem)
-                fallback = first_human_title(src) if src is not None else "(leer)"
+                fallback = first_human_title(content_src) if content_src is not None else "(leer)"
                 self._title_cache[path] = native or tui or fallback
         return self._title_cache[path]
 
