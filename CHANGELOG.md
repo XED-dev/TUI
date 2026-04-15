@@ -6,6 +6,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ---
 
+## [1.26.1] — 2026-04-15
+
+### Fixed
+- **`custom-title` records now written in compact Claude-native format.** XED previously used Python's default `json.dumps` which adds whitespace padding (`{"type": "custom-title", …}`). Claude Code's and ZED's History / Resume UIs parse session labels with whitespace-sensitive patterns and silently ignored XED-written records — XED-renamed sessions appeared in those UIs under the first user message instead of the new title. v1.26.1 writes with `separators=(",", ":")` (`{"type":"custom-title",…}`), bit-identical to what Claude itself writes.
+- **`[U]` batch update retrofits pre-v1.26.1 sessions.** `repair_custom_title_format()` appends a compact rewrite of the most recent title to every JSONL whose last `custom-title` record is still whitespace-padded. Idempotent, append-only, non-destructive — runs automatically in `[U]` and reports `N Titel repariert` in the status line. Sessions never touched by `[U]` stay as-is; a single `[T]` rename also produces the new format.
+
 ## [1.26.0] — 2026-04-15
 
 ### Added

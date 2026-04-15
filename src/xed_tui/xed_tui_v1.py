@@ -44,7 +44,7 @@ from datetime import datetime
 from pathlib import Path
 
 CLAUDE_PROJECTS = Path.home() / ".claude" / "projects"
-VERSION = "v1.26.0"
+VERSION = "v1.26.1"
 
 # XED /TUI eigenes Territorium (außerhalb ~/.claude/ — Claude Code darf hier
 # nichts anfassen). Später auch SQLite-DB unter db/, Cache, etc.
@@ -225,6 +225,51 @@ def restore_session(archived_jsonl: Path, target_proj: Path) -> Path:
     now = time.time()
     os.utime(dest, (now, now))
     return dest
+
+
+def repair_custom_title_format(jsonl_path: Path) -> bool:
+    """Repariert custom-title-Records, die von XED v1.25.0 / v1.26.0 im
+    whitespace-gepaddeten Format geschrieben wurden. Claude Code und ZED
+    erkennen diese Records in ihrer History-/Resume-UI nicht.
+
+    Wenn der letzte custom-title-Record in der JSONL gepaddet ist (`{"type": ...`
+    mit Leerzeichen nach `:` und `,`), wird ein frischer, kompakter Rewrite-Record
+    mit demselben customTitle angehängt. Append-only, nicht-destruktiv.
+
+    Gibt True zurück wenn repariert, False wenn nichts zu tun war.
+    """
+    if not jsonl_path.exists() or jsonl_path.suffix != ".jsonl":
+        return False
+    last_title = None
+    last_session = None
+    last_padded = False
+    try:
+        with open(jsonl_path, encoding="utf-8") as f:
+            for line in f:
+                if '"custom-title"' not in line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if obj.get("type") == "custom-title" and obj.get("customTitle"):
+                    last_title = obj["customTitle"]
+                    last_session = obj.get("sessionId") or jsonl_path.stem
+                    # Kompakt = startet mit '{"type":"custom-title"' (kein Leerzeichen).
+                    last_padded = not line.startswith('{"type":"custom-title"')
+    except OSError:
+        return False
+    if last_title is None or not last_padded:
+        return False
+    try:
+        with open(jsonl_path, "a", encoding="utf-8") as f:
+            record = {"type": "custom-title", "customTitle": last_title,
+                      "sessionId": last_session}
+            f.write(json.dumps(record, ensure_ascii=False,
+                               separators=(",", ":")) + "\n")
+    except OSError:
+        return False
+    return True
 
 
 def get_all_notes() -> list[Path]:
@@ -1169,7 +1214,10 @@ class State:
                 with open(jsonl, "a", encoding="utf-8") as f:
                     record = {"type": "custom-title", "customTitle": new_title,
                               "sessionId": path.stem}
-                    f.write(json.dumps(record, ensure_ascii=False) + "\n")
+                    # Kompaktes Format (separators=(",", ":")) — Claude Code und ZED
+                    # erkennen custom-title-Records nur ohne Whitespace-Padding (v1.26.1).
+                    f.write(json.dumps(record, ensure_ascii=False,
+                                       separators=(",", ":")) + "\n")
             except OSError:
                 pass
         # 2) titles.json aktualisieren (TUI-Fallback)
@@ -1320,6 +1368,7 @@ class State:
             return "  Keine Sessions im aktuellen Projekt."
         created = updated = current_ = skipped = orphan = archived = 0
         notes_archived = 0
+        titles_repaired = 0
         for sess in sessions:
             # Quelle (JSONL) und Ziel (.md) je nach Kontext bestimmen.
             if sess.suffix == ".md":
@@ -1364,6 +1413,15 @@ class State:
             if target and target.exists() and archive_note(target):
                 notes_archived += 1
 
+        # Pre-v1.26.1 custom-title-Records reparieren (whitespace → kompakt).
+        # Claude Code / ZED History-UIs lesen nur das kompakte Format.
+        for sess in sessions:
+            live = (note_project(sess) / f"{sess.stem}.jsonl"
+                    if sess.suffix == ".md" else sess)
+            if live.exists() and repair_custom_title_format(live):
+                titles_repaired += 1
+                self._title_cache.pop(sess, None)
+
         # Caches invalidieren (Notizen-Text, Session-Reihenfolge).
         self._notes_text_cache.clear()
         self._sessions_cache.pop(self.proj_idx, None)
@@ -1379,6 +1437,8 @@ class State:
             parts.append(f"{archived} Bände")
         if notes_archived:
             parts.append(f"{notes_archived} Karten")
+        if titles_repaired:
+            parts.append(f"{titles_repaired} Titel repariert")
         if skipped:
             parts.append(f"{skipped} ohne Sync")
         if orphan:
