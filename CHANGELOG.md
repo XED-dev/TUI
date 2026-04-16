@@ -6,6 +6,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ---
 
+## [1.26.6] — 2026-04-16
+
+### Fixed
+- **`get_session_cwd()` now validates the cwd against the JSONL project slug before returning it.** Claude Code logs cwd changes into `isMeta` records as the session's shell wanders (e.g. a `cd git/xed/` during a build). The naive „first `isMeta`+cwd wins" heuristic returned the wrong directory for sessions that had moved between projects — AG006 got `/mnt/.../git/xed` instead of `/mnt/.../fb-data` after multiple cross-project operations. `os.chdir` to the wrong cwd made Claude Code look for the session in `~/.claude/projects/-mnt-…-xed/` where it doesn't exist → „No conversations found to resume". v1.26.6 only returns a cwd whose slug (Claude convention: `/` → `-`) equals the JSONL parent directory name. Sessions without a matching record fall back to `None` (no `chdir`), so the user's shell cwd stays in effect — safer than wandering off.
+
 ## [1.26.5] — 2026-04-16
 
 ### Fixed

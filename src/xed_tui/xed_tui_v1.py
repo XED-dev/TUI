@@ -44,7 +44,7 @@ from datetime import datetime
 from pathlib import Path
 
 CLAUDE_PROJECTS = Path.home() / ".claude" / "projects"
-VERSION = "v1.26.5"
+VERSION = "v1.26.6"
 
 # XED /TUI eigenes Territorium (außerhalb ~/.claude/ — Claude Code darf hier
 # nichts anfassen). Später auch SQLite-DB unter db/, Cache, etc.
@@ -639,7 +639,20 @@ def load_thread(path: Path) -> list[dict]:
 
 
 def get_session_cwd(path: Path) -> str | None:
-    """Liest `cwd` aus der isMeta-Zeile des JSONL — für Claude Code --resume."""
+    """Liest den cwd aus der ersten isMeta-Zeile, die slug-konsistent zum JSONL-
+    Pfad ist — für Claude Code `--resume`.
+
+    Claude logged bei Bash-`cd`-Calls während der Session cwd-Wechsel in den
+    isMeta-Records mit. Naive „erster Record gewinnt" liefert bei Sessions, die
+    zwischen Projekten gewandert sind (z.B. AG006 hatte wegen `cd git/xed/`
+    beides: `-mnt-…-fb-data` UND `-mnt-…-xed`) den falschen cwd und führt zu
+    `No conversations found to resume` nach `os.chdir`.
+
+    Lösung: nur Matches zurückgeben, deren Slug (Claude-Konvention: `/` → `-`)
+    dem JSONL-Parent-Dir entspricht — das ist die Projekt-Zuordnung.
+    Fallback: None, dann lässt der Aufrufer das Shell-cwd stehen.
+    """
+    jsonl_slug = path.parent.name
     try:
         with open(path, encoding="utf-8") as f:
             for line in f:
@@ -647,8 +660,10 @@ def get_session_cwd(path: Path) -> str | None:
                     obj = json.loads(line)
                 except json.JSONDecodeError:
                     continue
-                if obj.get("isMeta") and "cwd" in obj:
-                    return obj["cwd"]
+                if obj.get("isMeta") and obj.get("cwd"):
+                    cwd = obj["cwd"]
+                    if cwd.replace("/", "-") == jsonl_slug:
+                        return cwd
     except OSError:
         pass
     return None

@@ -4,6 +4,11 @@
 
 ---
 
+## [1.26.6] — 2026-04-16
+
+### Behoben
+- **`get_session_cwd()` validiert den cwd jetzt gegen den JSONL-Projekt-Slug, bevor er zurückgegeben wird.** Claude Code loggt cwd-Wechsel in `isMeta`-Records, während die Shell wandert (z.B. `cd git/xed/` während eines Builds). Die naive „erster `isMeta`+cwd gewinnt"-Heuristik lieferte den falschen cwd für Sessions, die zwischen Projekten gewandert waren — AG006 bekam `/mnt/.../git/xed` statt `/mnt/.../fb-data` nach mehreren Cross-Projekt-Operationen. `os.chdir` in den falschen cwd ließ Claude Code die Session in `~/.claude/projects/-mnt-…-xed/` suchen, wo sie nicht existiert → „No conversations found to resume". v1.26.6 returnt nur einen cwd, dessen Slug (Claude-Konvention: `/` → `-`) dem JSONL-Parent-Dir entspricht. Sessions ohne matchenden Record fallen auf `None` (kein `chdir`) zurück, das Shell-cwd des Users bleibt bestehen — sicherer als in die Irre laufen.
+
 ## [1.26.5] — 2026-04-16
 
 ### Behoben
