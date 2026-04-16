@@ -44,7 +44,7 @@ from datetime import datetime
 from pathlib import Path
 
 CLAUDE_PROJECTS = Path.home() / ".claude" / "projects"
-VERSION = "v1.26.4"
+VERSION = "v1.26.5"
 
 # XED /TUI eigenes Territorium (außerhalb ~/.claude/ — Claude Code darf hier
 # nichts anfassen). Später auch SQLite-DB unter db/, Cache, etc.
@@ -3196,13 +3196,22 @@ def cmd_claude(pattern: str) -> None:
         print("→ bitte eindeutiger machen.", file=sys.stderr)
         sys.exit(2)
     uuid, title, cwd, _ = matches[0]
-    # Claude Code v2.x: --resume bevorzugt den custom-title / session_name als
-    # Resume-Argument. UUID-Resume scheitert bei Sessions mit mehreren custom-
-    # title-Records ("No conversation found with session ID: ..."). Der volle
-    # Titel-String ist zuverlässig. Bei Sessions ohne Titel (Edge case —
-    # HUFi.AI-Workflow setzt Titel immer): UUID als Fallback.
-    resume_arg = title or uuid
-    print(f"→ claude --resume \"{resume_arg}\"", file=sys.stderr)
+    # Claude Code v2.x --resume-Semantik (empirisch, Stand 2026-04-16):
+    #   - UUID-Resume scheitert bei Sessions mit mehreren custom-title-Records
+    #     (v1.26.4-Fix war darum notwendig).
+    #   - Voller Titel als Argument scheitert ebenfalls bei langen/komplexen
+    #     Titeln oder hoher Anzahl Records ("No conversations found to resume").
+    #   - Aber: das User-Pattern als Argument öffnet zuverlässig den Resume-
+    #     Picker **vorgefiltert**. Bei eindeutigem Match reicht ein Enter.
+    # Wir reichen das User-Pattern weiter — robust, ein Tastendruck mehr.
+    # XED hat den eindeutigen Match intern bereits gefunden; die Info geht
+    # als Hinweis auf stderr, dann springt Claude mit dem Picker ein.
+    resume_arg = pattern
+    short = title[:60] + ("…" if len(title) > 60 else "")
+    print(f"→ claude --resume \"{resume_arg}\"  (match: {short})",
+          file=sys.stderr)
+    print("  Hinweis: Claude öffnet den Picker vorgefiltert — Enter drücken.",
+          file=sys.stderr)
     if cwd:
         try:
             os.chdir(cwd)

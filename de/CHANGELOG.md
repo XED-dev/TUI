@@ -4,6 +4,11 @@
 
 ---
 
+## [1.26.5] — 2026-04-16
+
+### Behoben
+- **`xed-tui claude <pattern>` reicht das User-Pattern an `claude --resume` weiter, nicht den vollen Titel.** v1.26.4 hat den aufgelösten custom-title übergeben, aber Claude Code v2.x scheitert mit `No conversations found to resume` bei Sessions mit vielen `custom-title`-Records (44+ nach wiederholten `[U]`-Repair-Läufen) oder komplexen Titeln mit Sonderzeichen (`/` etc.). Der einzig zuverlässige Weg ist, ein kurzes Pattern zu übergeben und Claude den Resume-Picker vorgefiltert öffnen zu lassen — ein Enter-Druck reicht. XED löst den eindeutigen Match intern trotzdem vorher auf; der Titel geht als Verifikation auf stderr. Trade-off: ein Tastendruck mehr für Robustheit gegen Claudes v2.x-Auflösungs-Eigenheiten.
+
 ## [1.26.4] — 2026-04-16
 
 ### Behoben
