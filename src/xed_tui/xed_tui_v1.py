@@ -44,7 +44,7 @@ from datetime import datetime
 from pathlib import Path
 
 CLAUDE_PROJECTS = Path.home() / ".claude" / "projects"
-VERSION = "v1.26.2"
+VERSION = "v1.26.3"
 
 # XED /TUI eigenes Territorium (außerhalb ~/.claude/ — Claude Code darf hier
 # nichts anfassen). Später auch SQLite-DB unter db/, Cache, etc.
@@ -3145,11 +3145,87 @@ def print_paged(text: str) -> None:
             break
 
 
+def resolve_session_by_title(pattern: str) -> list[tuple[str, str, str | None, Path]]:
+    """Findet Live-Sessions, deren Titel das pattern (case-insensitive Substring) enthält.
+
+    Scannt nur ~/.claude/projects/<proj>/*.jsonl — keine verwaisten Archiv-Notizen.
+    Titel-Priorität wie in State.title(): custom-title aus JSONL > titles.json > first human.
+
+    Gibt (uuid, title, cwd, jsonl_path) für jeden Treffer zurück.
+    Konvention: Bei unserem Workflow beginnt der Titel immer mit "AA000" bis "ZZ999"
+    (5 Zeichen: 2 Buchstaben + 3 Ziffern, z.B. AG006, AI022) — daher reicht dieses
+    5-Zeichen-Präfix als eindeutiges Pattern.
+    """
+    pat = pattern.lower().strip()
+    if not pat:
+        return []
+    matches = []
+    for proj in get_all_projects():
+        if proj.name == VIRTUAL_ARCHIV_NAME:
+            continue
+        titles_map = load_titles(proj)
+        for jsonl in proj.glob("*.jsonl"):
+            uuid = jsonl.stem
+            native = get_native_title(jsonl)
+            tui = titles_map.get(uuid)
+            title = native or tui or first_human_title(jsonl) or ""
+            if pat in title.lower():
+                matches.append((uuid, title, get_session_cwd(jsonl), jsonl))
+    return matches
+
+
+def cmd_claude(pattern: str) -> None:
+    """`xed-tui claude <pattern>` — findet Live-Session per Titel und startet `claude --resume`.
+
+    Bei genau 1 Treffer: os.chdir(cwd) + os.execvp('claude', [...]) — Python wird
+    durch Claude Code ersetzt (kein Wrapper-Restschicht).
+    Bei 0 Treffern: Fehlermeldung + Hinweis auf Lend bei Archiv-only Sessions.
+    Bei mehreren Treffern: Liste + exit 2 (User muss eindeutiger werden).
+    """
+    matches = resolve_session_by_title(pattern)
+    if not matches:
+        print(f"Keine Session mit Titel-Substring '{pattern}' gefunden.", file=sys.stderr)
+        print("Tipp: Ist die Session nur archiviert? Starte 'xed-tui',",
+              "drücke [L] Lend, dann [a] Resume.", file=sys.stderr)
+        sys.exit(1)
+    if len(matches) > 1:
+        print(f"Mehrere Sessions mit Titel-Substring '{pattern}' gefunden "
+              f"({len(matches)}):", file=sys.stderr)
+        for uuid, title, _, _ in matches:
+            print(f"  [{uuid[:8]}]  {title}", file=sys.stderr)
+        print("→ bitte eindeutiger machen.", file=sys.stderr)
+        sys.exit(2)
+    uuid, title, cwd, _ = matches[0]
+    print(f"→ claude --resume {uuid}  ({title})", file=sys.stderr)
+    if cwd:
+        try:
+            os.chdir(cwd)
+        except OSError as e:
+            print(f"  Warnung: cwd {cwd} nicht betretbar ({e}) — bleibe im aktuellen.",
+                  file=sys.stderr)
+    os.execvp("claude", ["claude", "--resume", uuid])
+
+
 def run():
     args = sys.argv[1:]
     if args and args[0] in ("--help", "-h"):
         print_paged(HELP_TEXTS["de"])
         sys.exit(0)
+    # Subcommand: `xed-tui claude <title-pattern>` — findet Session per Titel, resume.
+    if args and args[0] == "claude":
+        if len(args) < 2:
+            print("Usage: xed-tui claude <title-pattern>", file=sys.stderr)
+            print("       Findet Live-Session per Titel (case-insensitive Substring)",
+                  file=sys.stderr)
+            print("       und startet 'claude --resume <uuid>' im richtigen cwd.",
+                  file=sys.stderr)
+            print("       Konvention: Titel beginnen \"AA000\"..\"ZZ999\" (5 Zeichen) —",
+                  file=sys.stderr)
+            print("       dieses 5-Zeichen-Präfix reicht als eindeutiges Pattern.",
+                  file=sys.stderr)
+            sys.exit(1)
+        cmd_claude(args[1])
+        return  # unreachable — execvp hat den Prozess ersetzt
     continue_data = load_continue_state() if ("--continue" in args or "-c" in args) else None
     if not CLAUDE_PROJECTS.exists():
         print(f"Verzeichnis nicht gefunden: {CLAUDE_PROJECTS}", file=sys.stderr)

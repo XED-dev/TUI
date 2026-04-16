@@ -6,6 +6,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ---
 
+## [1.26.3] — 2026-04-15
+
+### Added
+- **`xed-tui claude <title-pattern>` CLI subcommand** — finds a live session by title (case-insensitive substring) across all projects and replaces the Python process with `claude --resume <uuid>` in the correct `cwd`. Title resolution follows the same priority as the TUI (native `custom-title` in JSONL → `titles.json` → first human message). On multiple matches: lists candidates on stderr and exits 2. On zero matches: exits 1 with a hint about `[L]` Lend for archive-only sessions.
+- Convention: titles in our workflow always start with `"AA000"` to `"ZZ999"` (5 chars = 2 letters + 3 digits, e.g. `AG006`, `AI022`). This 5-char prefix is usually enough to identify a session uniquely — `xed-tui claude AG006` resumes the session, no UUID typing required.
+
 ## [1.26.2] — 2026-04-15
 
 ### Fixed

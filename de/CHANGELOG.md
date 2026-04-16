@@ -4,6 +4,12 @@
 
 ---
 
+## [1.26.3] — 2026-04-15
+
+### Neu
+- **`xed-tui claude <title-pattern>` CLI-Subcommand** — findet eine Live-Session per Titel (case-insensitive Substring) über alle Projekte hinweg und ersetzt den Python-Prozess durch `claude --resume <uuid>` im richtigen `cwd`. Titel-Auflösung folgt der TUI-Priorität (nativer `custom-title` in JSONL → `titles.json` → erste User-Message). Bei mehreren Treffern: Liste auf stderr, exit 2. Bei null Treffern: exit 1 mit Hinweis auf `[L]` Lend für nur-archivierte Sessions.
+- Konvention: Bei unserem Workflow beginnt der Titel immer mit `"AA000"` bis `"ZZ999"` (5 Zeichen: 2 Buchstaben + 3 Ziffern, z.B. `AG006`, `AI022`). Dieses 5-Zeichen-Präfix reicht meist als eindeutige Session-ID — `xed-tui claude AG006` nimmt die Session auf, keine UUID mehr tippen.
+
 ## [1.26.2] — 2026-04-15
 
 ### Behoben
