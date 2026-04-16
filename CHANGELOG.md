@@ -6,6 +6,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ---
 
+## [1.26.4] — 2026-04-16
+
+### Fixed
+- **`xed-tui claude <title>` now passes the title to `claude --resume`, not the UUID.** Claude Code v2.x treats the `--resume` argument as the custom-title / session_name — UUID-resume fails on sessions with multiple `custom-title` records (which every session has after a `[U]` run with v1.26.1's `repair_custom_title_format`). Error was `No conversation found with session ID: <uuid>`. v1.26.4 passes the full title string that XED already resolved, which Claude handles cleanly. Bonus: if a user types `claude --resume "AG006"` directly (short prefix, not unique), Claude v2.x opens the interactive picker pre-filtered — useful fallback for ambiguous patterns.
+
 ## [1.26.3] — 2026-04-15
 
 ### Added

@@ -44,7 +44,7 @@ from datetime import datetime
 from pathlib import Path
 
 CLAUDE_PROJECTS = Path.home() / ".claude" / "projects"
-VERSION = "v1.26.3"
+VERSION = "v1.26.4"
 
 # XED /TUI eigenes Territorium (außerhalb ~/.claude/ — Claude Code darf hier
 # nichts anfassen). Später auch SQLite-DB unter db/, Cache, etc.
@@ -3196,14 +3196,20 @@ def cmd_claude(pattern: str) -> None:
         print("→ bitte eindeutiger machen.", file=sys.stderr)
         sys.exit(2)
     uuid, title, cwd, _ = matches[0]
-    print(f"→ claude --resume {uuid}  ({title})", file=sys.stderr)
+    # Claude Code v2.x: --resume bevorzugt den custom-title / session_name als
+    # Resume-Argument. UUID-Resume scheitert bei Sessions mit mehreren custom-
+    # title-Records ("No conversation found with session ID: ..."). Der volle
+    # Titel-String ist zuverlässig. Bei Sessions ohne Titel (Edge case —
+    # HUFi.AI-Workflow setzt Titel immer): UUID als Fallback.
+    resume_arg = title or uuid
+    print(f"→ claude --resume \"{resume_arg}\"", file=sys.stderr)
     if cwd:
         try:
             os.chdir(cwd)
         except OSError as e:
             print(f"  Warnung: cwd {cwd} nicht betretbar ({e}) — bleibe im aktuellen.",
                   file=sys.stderr)
-    os.execvp("claude", ["claude", "--resume", uuid])
+    os.execvp("claude", ["claude", "--resume", resume_arg])
 
 
 def run():
