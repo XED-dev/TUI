@@ -1,7 +1,7 @@
 # AGENTS.md — XED /TUI
 > Pflichtlektüre für alle AI-Agenten die in diesem Repo arbeiten.
 > Englische Version: `../AGENTS.md` (AI-Übersetzung dieser Datei)
-> Stand: März 2026
+> Stand: April 2026
 
 ---
 
@@ -22,6 +22,13 @@ und alle die Claude Code im Terminal nutzen.
 2. **KEIN SUDO.** Niemals.
 3. **NULL TERMINAL-COMMANDS OHNE EXPLIZITE FREIGABE.**
    Erlaubt ohne Freigabe: Read-Tool + Write-Tool. Sonst nichts.
+3a. **KEINE DELETIONS DURCH AI-AGENTEN.** Absolut verboten sind
+    `rm`, `rmdir`, `shred`, `unlink`, `find -delete`, `find -exec rm`,
+    `shutil.rmtree`, `Path.unlink`, `fs.rm` und sprachliche Äquivalente.
+    Nur der Human DevOps löscht. Wenn etwas weg muss: STOPP, Befehl
+    vorschlagen, warten. Keine Ausnahmen — auch nicht für Build-Artefakte
+    (`dist/`, `build/`, `__pycache__/`, `node_modules/`). Moderne Build-
+    Werkzeuge (`uv build`, `pnpm build`, …) überschreiben idempotent.
 4. **KEINE CREDENTIALS IM CODE.** Nur `os.environ[]`.
 5. **WARTEN:** Nach jeder Frage auf Antwort warten. Nie vorausarbeiten.
 6. **Bei Unsicherheit: STOPP. Fragen. Warten.**

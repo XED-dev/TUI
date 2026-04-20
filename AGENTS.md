@@ -1,7 +1,7 @@
 # AGENTS.md — XED /TUI
 > Required reading for all AI agents working in this repository.
 > German source: `de/AGENTS.md` — this file is an AI translation.
-> Last updated: March 2026
+> Last updated: April 2026
 
 ---
 
@@ -22,6 +22,13 @@ and everyone using Claude Code in the terminal.
 2. **NO SUDO.** Ever.
 3. **NO TERMINAL COMMANDS WITHOUT EXPLICIT APPROVAL.**
    Allowed without approval: Read tool + Write tool. Nothing else.
+3a. **NO DELETIONS BY AI AGENTS.** Absolutely forbidden:
+    `rm`, `rmdir`, `shred`, `unlink`, `find -delete`, `find -exec rm`,
+    `shutil.rmtree`, `Path.unlink`, `fs.rm` and language equivalents.
+    Only the human DevOps deletes. If something needs to go: STOP,
+    propose the command, wait. No exceptions — not even build artifacts
+    (`dist/`, `build/`, `__pycache__/`, `node_modules/`). Modern build
+    tools (`uv build`, `pnpm build`, …) overwrite idempotently.
 4. **NO CREDENTIALS IN CODE.** Use `os.environ[]` only.
 5. **WAIT:** After every question, wait for a response. Never work ahead.
 6. **When in doubt: STOP. Ask. Wait.**
