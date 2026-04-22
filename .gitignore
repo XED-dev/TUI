@@ -23,3 +23,10 @@ npm/lib/xed_tui_v1.py
 *.deb
 *.exe
 *.zip
+
+# XED-Sub-Repos (eigene Distributionen, eigene .git/-Verzeichnisse)
+# Liegen historisch im selben Parent-Directory wie das XED /TUI-Repo.
+# Siehe: fb-data/dev/bin/XED-TUI/XED-Layout-Refactor.md
+Edit/
+Studio/
+Studio-Payload/
